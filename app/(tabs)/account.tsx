@@ -3,7 +3,7 @@ import { Text, View, StyleSheet } from 'react-native';
 export default function Account() {
     return (
         <View  style = {styles.container}>
-            <Text style={styles.text}>Account Info Screen</Text>
+            <Text style={styles.text}>Account</Text>
         </View>
     );
 }

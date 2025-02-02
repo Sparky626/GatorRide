@@ -4,7 +4,7 @@ import { Link } from 'expo-router';
 export default function Index() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>GatorRide</Text>
+      <Text style={styles.text}>GatorRide Home</Text>
     </View>
   );
 }
