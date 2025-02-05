@@ -4,40 +4,33 @@
     "slug": "GatorRide",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/gatorride.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash":
-    {
-      "image": "./assets/images/gatorride.png",
-      "imageWidth": 200,
-      "resizeMode": "contain",
-      "backgroundColor": "#0b1e7d"
-    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/gatorride.png",
+        "foregroundImage": "./assets/images/Logo.png",
         "backgroundColor": "#ffffff"
       }
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/gatorride.png"
+      "favicon": "./assets/images/Logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/gatorride.png",
+          "image": "./assets/images/Logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#0b1e7d"
+          "backgroundColor": "#ffffff"
         }
       ]
     ],

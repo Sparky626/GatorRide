@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet } from 'react-native';
 
-export default function Account() {
+export default function profile() {
     return (
         <View  style = {styles.container}>
             <Text style={styles.text}>Account</Text>
