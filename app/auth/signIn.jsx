@@ -19,11 +19,22 @@ export default function SignIn(){
             try {
                 const resp = await signInWithEmailAndPassword(auth, email, password)
                 const user = resp.user;
-                console.log(user);
-                console.log('here');
-                await getUserDetail();
-                setLoading(false);
-                router.replace('/(tabs)/home')
+                if (user.emailVerified == true){
+                    console.log(user);
+                    console.log('here');
+                    await getUserDetail();
+                    setLoading(false);
+                    router.replace('/(tabs)/home')
+                }
+                else{
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Email Not Verified!',
+                        text2: 'Check your email for a verification link!'
+                    })
+                    setLoading(false);
+                }
+                
             } catch (e) {
                 console.log(e);
                 Toast.show({

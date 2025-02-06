@@ -2,7 +2,7 @@ import { View, Text, Image, TextInput, TextInputProps, TouchableOpacity, Pressab
 import { StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import React, {useState, useContext} from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
 import { auth, db } from "@/config/firebaseConfig";
 import { UserDetailContext } from "@/context/UserDetailContext";
@@ -19,10 +19,18 @@ export default function SignUp(){
         const isUFLDomain = email.trim().endsWith('@ufl.edu');
         if (isUFLDomain == true){
             try {
-                const resp = await createUserWithEmailAndPassword(auth, email, password);  // ✅ Use await instead of .then()
+                const resp = await createUserWithEmailAndPassword(auth, email, password);
                 const user = resp.user;
-                console.log(user);
+                await updateProfile(user, { displayName: fullName });
+                console.log("Created Account for " + user.displayName + "!");
+                await sendEmailVerification(user);
+                Toast.show({
+                    type: 'success',
+                    text1: 'Verification Email Sent!',
+                    text2: 'Please check your inbox to verify your account.'
+                })
                 await SaveUser(user);
+                router.push('/auth/signIn');
             } catch (e) {
                 console.log('Error!');
             }
@@ -41,16 +49,11 @@ export default function SignUp(){
             await setDoc(doc(db, 'users', email), {
                 name: fullName,
                 email: email,
-                member: false,
+                driver: false,
                 uid: user?.uid
             });
-            console.log("User data saved successfully");
-            setUserDetail({
-                name: fullName,
-                email: email,
-                member: false,
-                uid: user?.uid
-            })
+            console.log("User data saved to db successfully");
+            setUserDetail(null);
         } catch (error) {
             console.error("Error saving user:", error);
         }

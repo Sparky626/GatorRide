@@ -12,13 +12,16 @@ export default function Index() {
 
   useEffect(() => {
     const persistentLogin = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const result = await getDoc(doc(db, "users", user.email));
-          setUserDetail(result.data());
-          router.replace("/(tabs)/home");
-        } catch (error) {
-          console.log("Error fetching user details:", error);
+      if (userDetail != null){
+        if (user) {
+          try {
+            console.log('Logged In!')
+            const result = await getDoc(doc(db, "users", user.email));
+            setUserDetail(result.data());
+            router.replace("/(tabs)/home");
+          } catch (error) {
+            console.log("Error fetching user details:", error);
+          }
         }
       }
     });
@@ -57,7 +60,7 @@ export default function Index() {
           fontSize: 24,
           color: '#f3400d',
           marginTop: 30,
-          marginBottom: 25,
+          marginBottom: 26,
           textAlign: 'center',
           fontFamily: 'oswald-light',
         }}>Carpooling with fellow students traveling in the same direction to share rides and save money!</Text>
@@ -75,9 +78,9 @@ export default function Index() {
 }
 const styles = StyleSheet.create({
   button: {
-    padding: 18,
+    padding: 20,
     backgroundColor: '#fef0da',
-    marginTop: 20,
+    marginTop: 15,
     borderRadius: 10,
   },
   buttonText: {
