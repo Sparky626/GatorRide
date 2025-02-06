@@ -1,5 +1,4 @@
 import { View, Text, Image, TextInput, TouchableOpacity, Pressable, ToastAndroid, ActivityIndicator } from "react-native";
-import Colors from '../../constant/Colors'
 import { StyleSheet } from "react-native";
 import React, { useState, useContext } from "react";
 import { useRouter } from "expo-router";
@@ -21,6 +20,7 @@ export default function SignIn(){
                 const resp = await signInWithEmailAndPassword(auth, email, password)
                 const user = resp.user;
                 console.log(user);
+                console.log('here');
                 await getUserDetail();
                 setLoading(false);
                 router.replace('/(tabs)/home')

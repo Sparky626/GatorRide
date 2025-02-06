@@ -4,21 +4,26 @@ import { useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/config/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
 export default function Index() {
   const router = useRouter();
   const {userDetail, setUserDetail} = useContext(UserDetailContext);
 
-  onAuthStateChanged(auth,async(user)=>{
-    if(user){
-      console.log(user);
-      const result = await getDoc(doc(db, 'users', user?.email));
-      setUserDetail(result.data())
-      router.replace('/(tabs)/home')
-
-    }
-  })
+  useEffect(() => {
+    const persistentLogin = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const result = await getDoc(doc(db, "users", user.email));
+          setUserDetail(result.data());
+          router.replace("/(tabs)/home");
+        } catch (error) {
+          console.log("Error fetching user details:", error);
+        }
+      }
+    });
+    return () => persistentLogin();
+  }, [router, setUserDetail])
 
   return (
     <View
@@ -49,12 +54,12 @@ export default function Index() {
           fontFamily: 'oswald-medium'
         }}>Welcome to GatorRide</Text>
         <Text style={{
-          fontSize: 25,
+          fontSize: 24,
           color: '#f3400d',
           marginTop: 30,
           marginBottom: 25,
           textAlign: 'center',
-          fontFamily: 'oswald-light'
+          fontFamily: 'oswald-light',
         }}>Carpooling with fellow students traveling in the same direction to share rides and save money!</Text>
       
       <TouchableOpacity style={styles.button} onPress={()=>router.push('/auth/signUp')}>
@@ -70,14 +75,14 @@ export default function Index() {
 }
 const styles = StyleSheet.create({
   button: {
-    padding: 15,
+    padding: 18,
     backgroundColor: '#fef0da',
     marginTop: 20,
     borderRadius: 10,
   },
   buttonText: {
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'oswald-bold'
   }
 })
