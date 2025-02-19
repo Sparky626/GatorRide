@@ -55,12 +55,23 @@ export default function SignIn(){
         <View style = {{
             display: 'flex',
             alignItems: 'center',
-            paddingTop: 100,
+            paddingTop: 70,
             flex:1,
             padding:25,
             backgroundColor: '#39347c'
 
         }}>
+            <TouchableOpacity
+                onPress={()=>router.push('/')}
+                style = {{
+                    alignSelf:'baseline'
+                }}>
+                    <Text style={{
+                        color: '#f3400d',
+                        fontFamily: 'oswald-light',
+                        fontSize: 20
+                    }}>BACK</Text>
+            </TouchableOpacity>
             <Image source={require('../../assets/images/logo.png')}
                 style={{
                     width: '100%',
@@ -124,6 +135,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         marginTop: 20,
         fontFamily: 'oswald-light',
-        borderRadius: 8
+        borderRadius: 8,
+        color: 'white'
     }
 })

@@ -12,7 +12,7 @@ export default function Index() {
 
   useEffect(() => {
     const persistentLogin = onAuthStateChanged(auth, async (user) => {
-      if (userDetail != null){
+      //if (userDetail != null){
         if (user) {
           try {
             console.log('Logged In!')
@@ -23,7 +23,7 @@ export default function Index() {
             console.log("Error fetching user details:", error);
           }
         }
-      }
+      //}
     });
     return () => persistentLogin();
   }, [router, setUserDetail])
@@ -60,7 +60,7 @@ export default function Index() {
           fontSize: 24,
           color: '#f3400d',
           marginTop: 30,
-          marginBottom: 26,
+          marginBottom: 28,
           textAlign: 'center',
           fontFamily: 'oswald-light',
         }}>Carpooling with fellow students traveling in the same direction to share rides and save money!</Text>

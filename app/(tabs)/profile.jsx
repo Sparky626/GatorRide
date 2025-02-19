@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, Image } from 'react-native';
 import { UserDetailContext } from '../../context/UserDetailContext';
 import { TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router/build';
@@ -34,6 +34,62 @@ export default function profile() {
         <View  style = {styles.container}>
             <Text style={styles.text}>Hello! {userDetail?.name}</Text>
             <Toast config={toastConfig}></Toast>
+            <Image source={require('../../assets/images/logo.png')}
+            style={{
+                width: '50%',
+                height: 100,
+                marginTop: 35,
+                marginBottom: 15
+            }}
+            />
+            <TouchableOpacity
+                style = {{
+                padding: 15,
+                backgroundColor: '#f3400d',
+                width: '40%',
+                marginTop: 25,
+                borderRadius: 10
+
+            }}>
+                <Text style={{
+                    fontFamily: 'oswald-bold',
+                    fontSize: 20,
+                    color: '#fef0da',
+                    textAlign: 'center'
+                }}>Account Details</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style = {{
+                padding: 15,
+                backgroundColor: '#f3400d',
+                width: '40%',
+                marginTop: 25,
+                borderRadius: 10
+
+            }}>
+                <Text style={{
+                    fontFamily: 'oswald-bold',
+                    fontSize: 20,
+                    color: '#fef0da',
+                    textAlign: 'center'
+                }}>Travel History</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style = {{
+                padding: 15,
+                backgroundColor: '#f3400d',
+                width: '40%',
+                marginTop: 25,
+                borderRadius: 10
+
+            }}>
+                <Text style={{
+                    fontFamily: 'oswald-bold',
+                    fontSize: 20,
+                    color: '#fef0da',
+                    textAlign: 'center'
+                }}>Settings</Text>
+            </TouchableOpacity>
             <TouchableOpacity 
                 onPress = {onSignOutClick}
                 style = {{
@@ -60,10 +116,12 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#0b1e7d',
-        justifyContent: 'center',
         alignItems: 'center',
     },
     text: {
-        color: '#eb7f05'
+        marginTop: 100,
+        color: '#eb7f05',
+        fontSize: 30,
+        fontFamily: 'oswald-bold'
     },
 });
