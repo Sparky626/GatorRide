@@ -1,11 +1,11 @@
 import { Text, View, StyleSheet } from "react-native";
 
-export default function home() {
+export default function schedule() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Explore Page!</Text>
+      <Text style={styles.text}>Schedule Page!</Text>
     </View>
-  );
+  ); 
 }
 
 const styles = StyleSheet.create({

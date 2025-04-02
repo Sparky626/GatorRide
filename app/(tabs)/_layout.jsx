@@ -22,10 +22,10 @@ export default function TabLayout() {
         tabBarLabel: 'Home'
         }}
       />
-      <Tabs.Screen name="explore"
+      <Tabs.Screen name="schedule"
       options={{
-        tabBarIcon:({color,size})=> <FontAwesome name="search" size={24} color="grey"/>,
-        tabBarLabel: 'Explore',
+        tabBarIcon:({color,size})=> <FontAwesome name="calendar" size={24} color="grey"/>,
+        tabBarLabel: 'Schedule',
       }}/>
       <Tabs.Screen name="map"
       options={{
