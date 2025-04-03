@@ -2,10 +2,10 @@ import { Text, View, StyleSheet } from 'react-native';
 import MapView from 'react-native-maps';
 
 const INITIAL_REGION = {
-    latitude: 29.651634, 
-    longitude: -82.324829,
-    latitudeDelta: 0.10,
-    longitudeDelta: 0.10,
+    latitude: 29.647011, 
+    longitude: -82.347389,
+    latitudeDelta: 0.0175,
+    longitudeDelta: 0.0175,
 }
 
 export default function Map() {

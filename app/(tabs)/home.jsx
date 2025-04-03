@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet, TextInput, FlatList, TouchableOpacity, Image } from "react-native";
 import React, { useState } from "react";
-
+import GooglePlacesInput from "../components/GooglePlacesInput";
 const DATA = [
   {
     ride_id: "1",
@@ -143,7 +143,6 @@ const RideCard = ({ rideData, onSelect, isSelected }) => {
 export default function Home() {
   const [text, onChangeText] = useState('');
   const [selectedRideId, setSelectedRideId] = useState(null);
-
   const renderRideCard = ({ item }) => (
     <RideCard
       rideData={item}
@@ -161,12 +160,7 @@ export default function Home() {
         marginTop: 70
       }}
       />
-      <TextInput
-        style={styles.textinput}
-        onChangeText={onChangeText}
-        value={text}
-        placeholder='Where ya going?'
-      />
+      <GooglePlacesInput/>
       <Text style={styles.text}>
         Recent Rides
       </Text>
@@ -179,7 +173,6 @@ export default function Home() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -6,6 +6,7 @@ import { auth, db } from "@/config/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { useContext, useEffect } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
+import 'react-native-get-random-values';
 export default function Index() {
   const router = useRouter();
   const {userDetail, setUserDetail} = useContext(UserDetailContext);
