@@ -13,8 +13,8 @@ export default function Index() {
 
   useEffect(() => {
     const persistentLogin = onAuthStateChanged(auth, async (user) => {
-      //if (userDetail != null){
         if (user) {
+          if (user.emailVerified) {
           try {
             console.log('Logged In!')
             const result = await getDoc(doc(db, "users", user.email));
@@ -24,7 +24,7 @@ export default function Index() {
             console.log("Error fetching user details:", error);
           }
         }
-      //}
+      }
     });
     return () => persistentLogin();
   }, [router, setUserDetail])

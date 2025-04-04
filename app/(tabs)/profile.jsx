@@ -50,7 +50,7 @@ export default function profile() {
                 marginTop: 25,
                 borderRadius: 10
 
-            }}>
+            }} onPress={()=>router.push('/account/account')}>
                 <Text style={{
                     fontFamily: 'oswald-bold',
                     fontSize: 20,
@@ -66,7 +66,7 @@ export default function profile() {
                 marginTop: 25,
                 borderRadius: 10
 
-            }}>
+            }} onPress={()=>router.push('/account/travelhistory')}>
                 <Text style={{
                     fontFamily: 'oswald-bold',
                     fontSize: 20,
@@ -82,13 +82,29 @@ export default function profile() {
                 marginTop: 25,
                 borderRadius: 10
 
-            }}>
+            }} onPress={()=>router.push('/account/settings')}>
                 <Text style={{
                     fontFamily: 'oswald-bold',
                     fontSize: 20,
                     color: '#fef0da',
                     textAlign: 'center'
                 }}>Settings</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style = {{
+                padding: 15,
+                backgroundColor: '#f3400d',
+                width: '40%',
+                marginTop: 25,
+                borderRadius: 10
+
+            }} onPress={()=>router.push('/account/driverSignUp')}>
+                <Text style={{
+                    fontFamily: 'oswald-bold',
+                    fontSize: 20,
+                    color: '#fef0da',
+                    textAlign: 'center'
+                }}>Become a Driver</Text>
             </TouchableOpacity>
             <TouchableOpacity 
                 onPress = {onSignOutClick}

@@ -1,16 +1,14 @@
 import { Text, View, StyleSheet, TextInput, FlatList, TouchableOpacity, Image } from "react-native";
 import React, { useState } from "react";
 import GooglePlacesInput from "../components/GooglePlacesInput";
+import RideCard from "../components/RideCard";
 const DATA = [
   {
     ride_id: "1",
     destination: "Library West",
     ride_time: 15,
-    fare_price: "16.00",
-    payment_status: "paid",
     driver_id: 2,
     user_id: "1",
-    created_at: "2024-08-12 05:19:20.620007",
     driver: {
       driver_id: "2",
       first_name: "Garrett",
@@ -26,10 +24,8 @@ const DATA = [
     ride_id: "2",
     destination: "Reitz Union Building",
     ride_time: 12,
-    payment_status: "paid",
     driver_id: 2,
     user_id: "1",
-    created_at: "2024-08-12 05:19:20.620007",
     driver: {
       first_name: "John",
       last_name: "Dodd",
@@ -44,10 +40,8 @@ const DATA = [
     ride_id: "3",
     destination: "Flavet Field",
     ride_time: 14,
-    payment_status: "paid",
     driver_id: 2,
     user_id: "1",
-    created_at: "2024-08-12 05:19:20.620007",
     driver: {
       first_name: "Lillian",
       last_name: "Sullivan",
@@ -62,10 +56,8 @@ const DATA = [
     ride_id: "4",
     destination: "Southwest Rec Center",
     ride_time: 16,
-    payment_status: "paid",
     driver_id: 2,
     user_id: "1",
-    created_at: "2024-08-12 05:19:20.620007",
     driver: {
       first_name: "Hristo",
       last_name: "Stoynov",
@@ -80,10 +72,8 @@ const DATA = [
     ride_id: "5",
     destination: "Health Science Library",
     ride_time: 13,
-    payment_status: "paid",
     driver_id: 2,
     user_id: "1",
-    created_at: "2024-08-12 05:19:20.620007",
     driver: {
       first_name: "Brooke",
       last_name: "Albee",
@@ -96,49 +86,7 @@ const DATA = [
   },
 ];
 
-const RideCard = ({ rideData, onSelect, isSelected }) => {
-  const { 
-    ride_time,
-    driver,
-    destination 
-  } = rideData;
-  const distance = ((ride_time / 60) * 55).toFixed(1);
-  const gaspermile = (driver.gas = 'premium') ? 3.87/driver.mpg:3.16/driver.mpg;
-  const totalprice = distance * gaspermile;
-  var eta = (ride_time >= 60) ? Math.round(ride_time / 60):ride_time;
-  var time = (ride_time >= 60) ? "hr":"min";
-  return (
-    <TouchableOpacity 
-      style={[
-        styles.cardContainer,
-        isSelected && styles.selectedCard
-      ]}
-      onPress={onSelect}
-    >
-      <View style={styles.rideInfo}>
-        <Image
-          source={{ uri: driver.car_image_url }}
-          style={styles.rideIcon}
-        />
-        <View>
-          <Text style={styles.rideType}>{driver.first_name} {driver.last_name}</Text>
-          <Text style={styles.destination}>
-            to {destination}
-          </Text>
-          <Text style={styles.rating}>★{parseFloat(driver.rating).toFixed(1)}</Text>
-        </View>
-      </View>
 
-      <View style={styles.detailsContainer}>
-        <View style={styles.timeDistance}>
-          <Text style={styles.eta}>{eta} {time}</Text>
-          <Text style={styles.distance}>{distance} miles</Text>
-        </View>
-        <Text style={styles.price}>${parseFloat(totalprice).toFixed(2)}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-};
 
 export default function Home() {
   const [text, onChangeText] = useState('');
@@ -197,75 +145,5 @@ const styles = StyleSheet.create({
     fontSize: 27.5,
     backgroundColor: '#0b1e7d',
     fontFamily: 'oswald-bold'
-  },
-  cardContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginVertical: 5,
-    width: 360,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  selectedCard: {
-    borderWidth: 2,
-    borderColor: 'orange',
-  },
-  rideInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rideIcon: {
-    width: 70,
-    height: 70,
-    marginRight: 12.5,
-  },
-  rideType: {
-    fontFamily: 'oswald-bold',
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  destination: {
-    fontFamily: 'oswald-bold',
-    fontSize: 14,
-    color: 'grey',
-  },
-  rating: {
-    fontSize: 12,
-    color: '#ffce33',
-    fontFamily: 'oswald-bold'
-  },
-  detailsContainer: {
-    alignItems: 'flex-end',
-  },
-  timeDistance: {
-    alignItems: 'flex-end',
-    marginBottom: 5,
-  },
-  eta: {
-    fontSize: 14,
-    color: '#000',
-    fontFamily: 'oswald-bold'
-  },
-  distance: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'oswald-bold'
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'oswald-bold',
-    color: '#000'
-  },
+  }
 });
