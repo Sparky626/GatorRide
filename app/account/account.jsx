@@ -1,5 +1,6 @@
 import { Text, View, StyleSheet, TouchableOpacity  } from "react-native";
 import { useRouter } from "expo-router";
+import { UploadImage } from "../components/UploadImage"
 export default function Account() {
   const router = useRouter();
   return (
@@ -17,7 +18,11 @@ export default function Account() {
                       marginLeft: 20,
                   }}>BACK</Text>
             </TouchableOpacity>
-      <Text style={styles.text}>Account Details Page!</Text>
+      <UploadImage/>
+      <Text style={styles.text}>Personal Info: </Text>
+      <Text style={styles.text}>Name: </Text>
+      <Text style={styles.text}>Phone Number: </Text>
+      <Text style={styles.text}>Email: </Text>
     </View>
   ); 
 }

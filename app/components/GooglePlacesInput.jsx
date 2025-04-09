@@ -1,14 +1,22 @@
-import React from 'react';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { StyleSheet } from 'react-native';
+import React, { useState } from 'react';
 import { setParams } from 'expo-router/build/global-state/routing';
-const GooglePlacesInput = () => {
+const GooglePlacesInput = ({ placeholder = 'Where are you going?', onPlaceSelected, value = ''}) => {
+  const [selectedDescription, setSelectedDescription] = useState('');
   return (
     <GooglePlacesAutocomplete
       styles={inputBoxStyles}
-      placeholder='Where are you going?'
+      placeholder={placeholder}
       nearbyPlacesAPI='GooglePlacesSearch'
       debounce={400}
+      onPress={(data, details = null) => {
+        const description = data.description;
+        setSelectedDescription(description);
+        if (onPlaceSelected) {
+          onPlaceSelected(description);
+        }
+      }}
       query={{
         key: 'AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo',
         language: 'en',
@@ -17,14 +25,20 @@ const GooglePlacesInput = () => {
       fetchDetails={true}
       minLength={2}
       enablePoweredByContainer={false}
+      textInputProps={{
+        value: value, // Set the input text to the value prop
+        onChangeText: (text) => {
+          if (onPlaceSelected) {
+            onPlaceSelected(text); // Update the parent state when typing manually
+          }
+        },
+      }}
     />
   );
 };
 const inputBoxStyles = StyleSheet.create({
     container: {
         backgroundColor: "#0b1e7d",
-        marginTop: 20,
-        marginBottom: 20,
         width: "85%",
         flex: 0,
     },

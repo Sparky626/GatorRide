@@ -7,7 +7,8 @@ import GooglePlacesInput from "../components/GooglePlacesInput";
 import RideCard from "../components/RideCard";
 export default function Home() {
   const {userDetail, setUserDetail} = useContext(UserDetailContext);
-  const [rides, setRides] = useState([]);
+  const [rides, setRides] = useState([]); 
+  const [origin, setOrigin] = useState("");
   const [selectedRideId, setSelectedRideId] = useState(null);
   useEffect(() => {
     const fetchRides = async () => {
@@ -42,10 +43,13 @@ export default function Home() {
       style={{
         width: 200,
         height: 100,
-        marginTop: 70
+        marginTop: 70,
+        marginBottom: 20
       }}
       />
-      <GooglePlacesInput/>
+      <GooglePlacesInput
+      onPlaceSelected={(description) => setOrigin(description)}
+      value={origin}/>
       <Text style={styles.text}>Recent Rides</Text>
       <FlatList
         data={rides}
@@ -65,6 +69,7 @@ const styles = StyleSheet.create({
   },
   text:{
     fontSize: 20,
+    marginTop: 20,
     marginBottom: 20,
     fontFamily: 'oswald-bold',
     color: 'white'

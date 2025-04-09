@@ -14,6 +14,8 @@ export default function Map() {
             <MapView 
             style={styles.map}
             initialRegion={INITIAL_REGION}
+            showsUserLocation={true}
+            followsUserLocation={true}
             />
         </View>
     );
