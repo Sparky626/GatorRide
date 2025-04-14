@@ -38,13 +38,15 @@ const GooglePlacesInput = ({ placeholder = 'Where are you going?', onPlaceSelect
 };
 const inputBoxStyles = StyleSheet.create({
     container: {
-        backgroundColor: "#0b1e7d",
-        width: "85%",
+        backgroundColor: "#1a2a9b",
+        alignItems: 'center',
+        width: "100%",
         flex: 0,
     },
     textInput: {
-        fontSize: 18,
-        backgroundColor: "#0b1e7d",
+        fontSize: 20,
+        backgroundColor: "#1a2a9b",
+        borderColor: '#1a2a9b',
         borderWidth: 1,
         color: "white",
         fontFamily: 'oswald-bold',
@@ -61,10 +63,10 @@ const inputBoxStyles = StyleSheet.create({
         flexWrap: 'wrap'
     },
     separator:{
-        backgroundColor: "#0b1e7d",
+        backgroundColor: "#1a2a9b",
     },
     row: {
-        backgroundColor: '#0b1e7d',
+        backgroundColor: '#1a2a9b',
     }
     
 });

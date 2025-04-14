@@ -26,7 +26,7 @@ export default function TabLayout() {
       options={{
         tabBarIcon:({color,size})=> <FontAwesome name="calendar" size={24} color="grey"/>,
         tabBarLabel: 'Schedule',
-      }}/>
+      }}/>r
       <Tabs.Screen name="map"
       options={{
         tabBarIcon:({color,size})=> <FontAwesome6 name="map-location-dot" size={24} color="grey"/>,
