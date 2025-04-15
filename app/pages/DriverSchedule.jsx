@@ -154,7 +154,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: "oswald-bold",
     textAlign: "center",
-    marginTop: 50,
     marginBottom: 20,
   },
   toggleButton: {

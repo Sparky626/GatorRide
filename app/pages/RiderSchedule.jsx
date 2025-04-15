@@ -311,14 +311,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0b1e7d",
-    padding: 20,
+    paddingRight: 20,
+    paddingLeft: 20,
   },
   title: {
     color: "#fff",
     fontSize: 24,
     fontFamily: "oswald-bold",
     textAlign: "center",
-    marginTop: 50,
     marginBottom: 20,
   },
   toggleButton: {

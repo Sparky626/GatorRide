@@ -75,7 +75,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0b1e7d',
-    paddingTop: 50,
     alignItems: 'center',
   },
   logo: {
@@ -103,6 +102,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a2a9b',
     borderRadius: 15,
     padding: 12.5,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
