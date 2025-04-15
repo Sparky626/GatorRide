@@ -130,12 +130,13 @@ const styles = StyleSheet.create({
         color: '#eb7f05',
         fontFamily: 'oswald-bold',
         fontSize: 28,
+        marginTop: 20,
         marginBottom: 20,
         textAlign: 'center',
     },
     logo: {
-        width: 180,
-        height: 90,
+        width: 230,
+        height: 120,
         marginVertical: 20,
     },
     buttonContainer: {

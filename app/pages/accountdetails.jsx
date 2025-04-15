@@ -13,6 +13,9 @@ export default function AccountDetails() {
     setProfileImage(uri);
   };
 
+  const isDriver = userDetail?.driver;
+  const showCarDetails = isDriver || userDetail?.car_details;
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
@@ -48,24 +51,24 @@ export default function AccountDetails() {
           <Text style={styles.infoValue}>{userDetail?.email || 'N/A'}</Text>
         </View>
         
-        {userDetail?.car_details && (
+        {showCarDetails && (
           <>
             <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Car Details</Text>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Model:</Text>
-              <Text style={styles.infoValue}>{userDetail.car_details.model || 'N/A'}</Text>
+              <Text style={styles.infoValue}>{userDetail?.car_details?.model || 'N/A'}</Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Year:</Text>
-              <Text style={styles.infoValue}>{userDetail.car_details.year || 'N/A'}</Text>
+              <Text style={styles.infoValue}>{userDetail?.car_details?.year || 'N/A'}</Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Gas Type:</Text>
-              <Text style={styles.infoValue}>{userDetail.car_details.gas_type || 'N/A'}</Text>
+              <Text style={styles.infoValue}>{userDetail?.car_details?.gas_type || 'N/A'}</Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>MPG:</Text>
-              <Text style={styles.infoValue}>{userDetail.car_details.mpg || 'N/A'}</Text>
+              <Text style={styles.infoValue}>{userDetail?.car_details?.mpg || 'N/A'}</Text>
             </View>
           </>
         )}

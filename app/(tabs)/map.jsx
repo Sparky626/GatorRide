@@ -1,36 +1,11 @@
-import { Text, View, StyleSheet } from 'react-native';
-import MapView from 'react-native-maps';
-
-const INITIAL_REGION = {
-    latitude: 29.647011, 
-    longitude: -82.347389,
-    latitudeDelta: 0.0175,
-    longitudeDelta: 0.0175,
-}
+import { useContext } from 'react';
+import { UserDetailContext } from '@/context/UserDetailContext';
+import RiderMap from '../pages/RiderMap';
+import DriverMap from '../pages/DriverMap';
 
 export default function Map() {
-    return (
-        <View  style = {styles.container}>
-            <MapView 
-            style={styles.map}
-            initialRegion={INITIAL_REGION}
-            showsUserLocation={true}
-            followsUserLocation={true}
-            />
-        </View>
-    );
-}
+  const { userDetail } = useContext(UserDetailContext);
+  const isDriver = userDetail?.driver;
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#0b1e7d',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    map: {
-        width: '100%',
-        height: '100%',
-        color: '#eb7f05'
-    },
-});
+  return isDriver ? <DriverMap /> : <RiderMap />;
+}

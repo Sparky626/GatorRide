@@ -12,20 +12,21 @@ export default function DriverSignUp() {
   const router = useRouter();
   const { userDetail, setUserDetail } = useContext(UserDetailContext);
   const [carModel, setCarModel] = useState("");
+  const [carMake, setCarMake] = useState("");
   const [carYear, setCarYear] = useState("");
   const [mpg, setMpg] = useState("");
   const [gasType, setGasType] = useState(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([
-    { label: "Regular", value: "regular" },
-    { label: "Midgrade", value: "midgrade" },
-    { label: "Premium", value: "premium" },
-    { label: "Diesel", value: "diesel" },
+    { label: "Regular", value: "Regular" },
+    { label: "Midgrade", value: "Midgrade" },
+    { label: "Premium", value: "Premium" },
+    { label: "Diesel", value: "Diesel" },
   ]);
 
   const handleSignUp = async () => {
-    if (!carModel || !carYear || !mpg || !gasType) {
+    if (!carModel || !carMake || !carYear || !mpg || !gasType) {
       Toast.show({
         type: "error",
         text1: "Error!",
@@ -68,6 +69,7 @@ export default function DriverSignUp() {
       const vehicleId = Date.now().toString();
       const vehicleData = {
         vehicle_id: vehicleId,
+        make: carMake,
         model: carModel,
         year: parseInt(carYear),
         mpg: parseFloat(mpg),
@@ -130,7 +132,14 @@ export default function DriverSignUp() {
       <Text style={styles.title}>Become a Driver</Text>
       <TextInput
         style={styles.input}
-        placeholder="Car Model (e.g., Toyota Camry)"
+        placeholder="Car Make (e.g., Toyota)"
+        placeholderTextColor="#888"
+        value={carMake}
+        onChangeText={setCarMake}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Car Model (e.g., Camry)"
         placeholderTextColor="#888"
         value={carModel}
         onChangeText={setCarModel}
