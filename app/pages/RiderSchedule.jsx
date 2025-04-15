@@ -1,10 +1,12 @@
-import { Text, View, StyleSheet, TouchableOpacity, FlatList } from "react-native";
-import { useState, useContext, useEffect } from "react";
+import { Text, View, StyleSheet, TouchableOpacity, FlatList, RefreshControl } from "react-native";
+import { useState, useContext, useEffect, useCallback } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { collection, doc, setDoc, getDocs } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import GooglePlacesInput from "../components/GooglePlacesInput";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import Toast from "react-native-toast-message";
+import toastConfig from "../../config/toastConfig";
 
 export default function RiderSchedule() {
   const { userDetail } = useContext(UserDetailContext);
@@ -25,28 +27,53 @@ export default function RiderSchedule() {
   const [destination, setDestination] = useState("");
   const [scheduledRides, setScheduledRides] = useState([]);
   const [viewMode, setViewMode] = useState("schedule");
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchScheduledRides = async () => {
-      try {
-        const uid = userDetail?.uid;
-        const user = userDetail?.email;
-        if (!user) return;
-
-        const ridesRef = collection(db, "users", user, "scheduled_rides");
-        const ridesSnapshot = await getDocs(ridesRef);
-        const ridesList = ridesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setScheduledRides(ridesList);
-      } catch (error) {
-        console.error("Error fetching scheduled rides:", error);
+  const fetchScheduledRides = useCallback(async () => {
+    try {
+      const uid = userDetail?.uid;
+      if (!uid) {
+        console.log("Missing userDetail.uid");
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "User not found. Please sign in again.",
+        });
+        return;
       }
-    };
 
-    fetchScheduledRides();
+      console.log("Fetching scheduled rides for user:", uid);
+      const ridesQuery = query(
+        collection(db, "scheduled_rides"),
+        where("user_id", "==", uid)
+      );
+      const ridesSnapshot = await getDocs(ridesQuery);
+      const ridesList = ridesSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      console.log("Scheduled rides found:", ridesList);
+      setScheduledRides(ridesList);
+    } catch (error) {
+      console.error("Error fetching scheduled rides:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to load rides.",
+      });
+    }
   }, [userDetail]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchScheduledRides();
+  }, [fetchScheduledRides]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchScheduledRides();
+    setRefreshing(false);
+  }, [fetchScheduledRides]);
 
   const onDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -76,14 +103,22 @@ export default function RiderSchedule() {
   const scheduleRide = async () => {
     try {
       const uid = userDetail?.uid;
-      const user = userDetail?.email;
-      if (!user) {
-        console.log("No user available");
+      const email = userDetail?.email;
+      if (!uid || !email) {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "User not found.",
+        });
         return;
       }
 
       if (!origin || !destination || !date) {
-        console.log("Please fill in all required fields (Origin, Destination, Date & Time)");
+        Toast.show({
+          type: "error",
+          text1: "Missing Fields",
+          text2: "Please fill in origin, destination, and date.",
+        });
         return;
       }
 
@@ -99,6 +134,7 @@ export default function RiderSchedule() {
         repeat: repeat,
         driver_id: "TBD",
         user_id: uid,
+        rider_email: email,
         driver: {
           driver_id: "TBD",
           first_name: "Pending",
@@ -111,29 +147,21 @@ export default function RiderSchedule() {
         },
       };
 
-      const userRef = doc(db, "users", user);
-      await setDoc(
-        userRef,
-        {
-          email: userDetail?.email || "unknown",
-          name: userDetail?.name || "Unknown User",
-          uid: uid,
-        },
-        { merge: true }
-      );
-
-      const rideRef = doc(db, "users", user, "scheduled_rides", rideId);
+      // Save to scheduled_rides collection
+      const rideRef = doc(db, "scheduled_rides", rideId);
       await setDoc(rideRef, newRide);
       console.log(`Ride ${rideId} scheduled for user ${uid}`);
-      console.log("Saved Ride Data:", newRide);
 
-      const ridesRef = collection(db, "users", user, "scheduled_rides");
-      const ridesSnapshot = await getDocs(ridesRef);
-      const ridesList = ridesSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setScheduledRides(ridesList);
+      // Update local state
+      if (viewMode === "view") {
+        setScheduledRides([...scheduledRides, { id: rideId, ...newRide }]);
+      }
+
+      Toast.show({
+        type: "success",
+        text1: "Ride Scheduled",
+        text2: "Your ride has been added successfully.",
+      });
 
       setOrigin("");
       setDestination("");
@@ -151,6 +179,11 @@ export default function RiderSchedule() {
       setViewMode("view");
     } catch (error) {
       console.error("Error scheduling ride:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to schedule ride.",
+      });
     }
   };
 
@@ -167,6 +200,9 @@ export default function RiderSchedule() {
           Days: {item.scheduled_days.join(", ")}
         </Text>
       )}
+      <Text style={styles.rideText}>
+        Driver: {item.driver_id === "TBD" ? "Pending" : item.driver.first_name + " " + item.driver.last_name}
+      </Text>
     </View>
   );
 
@@ -298,11 +334,20 @@ export default function RiderSchedule() {
           data={scheduledRides}
           renderItem={renderRideItem}
           keyExtractor={(item) => item.ride_id}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#f3400d"
+              colors={["#f3400d"]}
+            />
+          }
           ListEmptyComponent={
             <Text style={styles.emptyText}>No scheduled rides found.</Text>
           }
         />
       )}
+      <Toast config={toastConfig} />
     </View>
   );
 }
