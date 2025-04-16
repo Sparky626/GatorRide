@@ -64,7 +64,6 @@ export default function RiderSchedule() {
     }
   }, [userDetail]);
 
-  // Initial fetch
   useEffect(() => {
     fetchScheduledRides();
   }, [fetchScheduledRides]);
@@ -139,20 +138,26 @@ export default function RiderSchedule() {
           driver_id: "TBD",
           first_name: "Pending",
           last_name: "Driver",
-          car_image_url: "https://example.com/placeholder.png",
-          car_seats: 5,
-          car_gas: "regular",
-          mpg: 25,
+          car_details: {
+            car_image_url: "https://example.com/placeholder.png",
+            seats: 5,
+            gas_type: "regular",
+            mpg: 25,
+            license_plate: "TBD",
+            capacity: 5,
+            color: "Unknown",
+            make: "Unknown",
+            model: "Unknown",
+            year: 0,
+          },
           rating: "N/A",
         },
       };
 
-      // Save to scheduled_rides collection
       const rideRef = doc(db, "scheduled_rides", rideId);
       await setDoc(rideRef, newRide);
       console.log(`Ride ${rideId} scheduled for user ${uid}`);
 
-      // Update local state
       if (viewMode === "view") {
         setScheduledRides([...scheduledRides, { id: rideId, ...newRide }]);
       }
@@ -229,6 +234,7 @@ export default function RiderSchedule() {
               placeholder="Enter starting location"
               onPlaceSelected={(description) => setOrigin(description)}
               value={origin}
+              containerStyle={styles.roundedInput}
             />
           </View>
           <View style={styles.inputContainer}>
@@ -237,6 +243,7 @@ export default function RiderSchedule() {
               placeholder="Enter destination"
               onPlaceSelected={(description) => setDestination(description)}
               value={destination}
+              containerStyle={styles.roundedInput}
             />
           </View>
           <View style={styles.inputContainer}>
@@ -387,6 +394,15 @@ const styles = StyleSheet.create({
     fontFamily: "oswald-bold",
     fontSize: 16,
     marginBottom: 8,
+  },
+  roundedInput: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: "#f3400d",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    width: 300,
   },
   dateTimeContainer: {
     flexDirection: "row",

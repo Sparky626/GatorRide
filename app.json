@@ -8,13 +8,31 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "permissions": [
+      {
+        "name": "location",
+        "description": "Allow the app to access your location to set your current position as the ride origin."
+      }
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show your current position on the map."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#39347c"
+      },
+      "permissions": ["android.permission.ACCESS_FINE_LOCATION"],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo"
+        }
       }
     },
     "web": {

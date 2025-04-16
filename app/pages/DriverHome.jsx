@@ -1,9 +1,9 @@
 import { Text, View, StyleSheet, FlatList, Image } from "react-native";
 import React, { useState, useEffect, useContext } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
-import RideRequestCard from "../components/RideCard";
+import RideRequestCard from "../components/RideRequestCard"; // Updated import
 
 export default function DriverHome() {
   const { userDetail } = useContext(UserDetailContext);
@@ -11,23 +11,21 @@ export default function DriverHome() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
 
   useEffect(() => {
-    const fetchRideRequests = async () => {
-      try {
-        const requestsRef = collection(db, "ride_requests");
-        const querySnapshot = await getDocs(requestsRef);
-        const requestsData = [];
-        querySnapshot.forEach((doc) => {
-          requestsData.push({
-            id: doc.id,
-            ...doc.data(),
-          });
+    const requestsRef = collection(db, "ride_requests");
+    const unsubscribe = onSnapshot(requestsRef, (querySnapshot) => {
+      const requestsData = [];
+      querySnapshot.forEach((doc) => {
+        requestsData.push({
+          id: doc.id,
+          ...doc.data(),
         });
-        setRideRequests(requestsData);
-      } catch (error) {
-        console.error("Error fetching ride requests:", error);
-      }
-    };
-    fetchRideRequests();
+      });
+      setRideRequests(requestsData);
+    }, (error) => {
+      console.error("Error fetching ride requests:", error);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const renderRideRequestCard = ({ item }) => (
