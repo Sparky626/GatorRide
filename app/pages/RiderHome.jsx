@@ -91,7 +91,7 @@ export default function RiderHome() {
     setLoading(true);
     try {
       const rideRequest = {
-        riderEmail: userDetail.email,
+        riderName: userDetail.name,
         origin,
         destination,
         status: "pending",

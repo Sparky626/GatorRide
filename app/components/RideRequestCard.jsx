@@ -2,7 +2,7 @@ import React from "react";
 import { Text, View, StyleSheet, TouchableOpacity, Image } from "react-native";
 
 const RideRequestCard = ({ requestData, onSelect, isSelected }) => {
-  const { riderEmail, origin, destination, createdAt } = requestData;
+  const { riderName, origin, destination, createdAt } = requestData;
 
   // Format creation time (e.g., "10 min ago")
   const formatTimeAgo = (createdAt) => {
@@ -22,7 +22,7 @@ const RideRequestCard = ({ requestData, onSelect, isSelected }) => {
     >
       <View style={styles.requestInfo}>
         <View>
-          <Text style={styles.riderEmail}>{riderEmail}</Text>
+          <Text style={styles.riderEmail}>{riderName}</Text>
           <Text style={styles.origin}>From {origin}</Text>
           <Text style={styles.origin}>To {destination}</Text>
           <Text style={styles.timeAgo}>{formatTimeAgo(createdAt)}</Text>
