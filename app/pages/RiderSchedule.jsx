@@ -1,7 +1,7 @@
-import { Text, View, StyleSheet, TouchableOpacity, FlatList, RefreshControl } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Modal } from "react-native";
 import { useState, useContext, useEffect, useCallback } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { collection, doc, setDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import GooglePlacesInput from "../components/GooglePlacesInput";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -28,6 +28,8 @@ export default function RiderSchedule() {
   const [scheduledRides, setScheduledRides] = useState([]);
   const [viewMode, setViewMode] = useState("schedule");
   const [refreshing, setRefreshing] = useState(false);
+  const [cancelRideId, setCancelRideId] = useState(null);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
 
   const fetchScheduledRides = useCallback(async () => {
     try {
@@ -192,6 +194,36 @@ export default function RiderSchedule() {
     }
   };
 
+  const cancelRide = async () => {
+    if (!cancelRideId) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "No ride selected for cancellation.",
+      });
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "scheduled_rides", cancelRideId));
+      setScheduledRides(scheduledRides.filter((ride) => ride.id !== cancelRideId));
+      setCancelModalVisible(false);
+      setCancelRideId(null);
+      Toast.show({
+        type: "success",
+        text1: "Ride Cancelled",
+        text2: "Your ride has been successfully cancelled.",
+      });
+    } catch (error) {
+      console.error("Error cancelling ride:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to cancel ride.",
+      });
+    }
+  };
+
   const renderRideItem = ({ item }) => (
     <View style={styles.rideItem}>
       <Text style={styles.rideText}>Origin: {item.origin}</Text>
@@ -208,6 +240,15 @@ export default function RiderSchedule() {
       <Text style={styles.rideText}>
         Driver: {item.driver_id === "TBD" ? "Pending" : item.driver.first_name + " " + item.driver.last_name}
       </Text>
+      <TouchableOpacity
+        style={styles.cancelButton}
+        onPress={() => {
+          setCancelRideId(item.id);
+          setCancelModalVisible(true);
+        }}
+      >
+        <Text style={styles.cancelButtonText}>Cancel Ride</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -337,22 +378,53 @@ export default function RiderSchedule() {
           </TouchableOpacity>
         </>
       ) : (
-        <FlatList
-          data={scheduledRides}
-          renderItem={renderRideItem}
-          keyExtractor={(item) => item.ride_id}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#f3400d"
-              colors={["#f3400d"]}
-            />
-          }
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No scheduled rides found.</Text>
-          }
-        />
+        <>
+          <FlatList
+            data={scheduledRides}
+            renderItem={renderRideItem}
+            keyExtractor={(item) => item.ride_id}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#f3400d"
+                colors={["#f3400d"]}
+              />
+            }
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>No scheduled rides found.</Text>
+            }
+          />
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={cancelModalVisible}
+            onRequestClose={() => setCancelModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>Cancel Ride</Text>
+                <Text style={styles.modalText}>
+                  Are you sure you want to cancel this ride?
+                </Text>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.confirmButton]}
+                    onPress={cancelRide}
+                  >
+                    <Text style={styles.modalButtonText}>Yes, Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelModalButton]}
+                    onPress={() => setCancelModalVisible(false)}
+                  >
+                    <Text style={styles.modalButtonText}>No, Keep Ride</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        </>
       )}
       <Toast config={toastConfig} />
     </View>
@@ -498,11 +570,76 @@ const styles = StyleSheet.create({
     fontFamily: "oswald-bold",
     fontSize: 14,
   },
+  cancelButton: {
+    backgroundColor: "#888",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  cancelButtonText: {
+    color: "#fff",
+    fontFamily: "oswald-bold",
+    fontSize: 16,
+  },
   emptyText: {
     color: "#fff",
     fontFamily: "oswald-bold",
     fontSize: 16,
     textAlign: "center",
     marginTop: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: '#1a2a9b',
+    borderRadius: 10,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    color: '#eb7f05',
+    fontFamily: 'oswald-bold',
+    fontSize: 22,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  modalText: {
+    color: '#fff',
+    fontFamily: 'oswald-bold',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  confirmButton: {
+    backgroundColor: '#f3400d',
+  },
+  cancelModalButton: {
+    backgroundColor: '#888',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontFamily: 'oswald-bold',
+    fontSize: 16,
   },
 });
