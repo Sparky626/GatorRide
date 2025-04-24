@@ -99,7 +99,7 @@ export default function RiderHome() {
         setSearchModalVisible(requestsData.length > 0 && requestsData[0]?.status === "pending");
         if (requestsData.length > 0 && requestsData[0].status === "accepted") {
           setSearchModalVisible(false);
-          router.push(`/RideTracking?requestId=${requestsData[0].id}`);
+          router.push(`pages/RideTracking?requestId=${requestsData[0].id}`);
         }
       }, (error) => {
         console.error("Error fetching ride requests:", error);

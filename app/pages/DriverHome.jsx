@@ -85,7 +85,7 @@ export default function DriverHome() {
       });
 
       // Navigate to RideTracking
-      router.push(`/RideTracking?requestId=${rideId}`);
+      router.push(`pages/RideTracking?requestId=${rideId}`);
     } catch (error) {
       console.error("Error accepting ride:", error);
       Toast.show({

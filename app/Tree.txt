@@ -1,0 +1,39 @@
+Folder PATH listing
+Volume serial number is 2EEC-072F
+C:.
+|   index.jsx
+|   Resultant.txt
+|   _layout.tsx
+|   
++---(tabs)
+|       home.jsx
+|       map.jsx
+|       profile.jsx
+|       schedule.jsx
+|       _layout.jsx
+|       
++---account
+|       accountdetails.jsx
+|       driverSignUp.jsx
+|       settings.jsx
+|       travelhistory.jsx
+|       
++---auth
+|       signIn.jsx
+|       signUp.jsx
+|       
++---components
+|       GooglePlacesInput.jsx
+|       RideCard.jsx
+|       RideRequestCard.jsx
+|       UploadImage.jsx
+|       
+\---pages
+        DriverHome.jsx
+        DriverMap.jsx
+        DriverSchedule.jsx
+        RiderHome.jsx
+        RiderMap.jsx
+        RiderSchedule.jsx
+        RideTracking.jsx
+        

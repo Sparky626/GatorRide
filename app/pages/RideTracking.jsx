@@ -1,277 +1,177 @@
-import { Text, View, StyleSheet, FlatList, Image, TouchableOpacity, Alert, Modal, ActivityIndicator } from "react-native";
 import React, { useState, useEffect, useContext } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { collection, getDocs, addDoc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
-import GooglePlacesInput from "../components/GooglePlacesInput";
-import RideCard from "../components/RideCard";
 import * as Location from "expo-location";
 import Toast from "react-native-toast-message";
 import toastConfig from "../../config/toastConfig";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
-export default function RiderHome() {
+export default function RideTracking() {
   const { userDetail } = useContext(UserDetailContext);
+  const { requestId } = useLocalSearchParams();
   const router = useRouter();
-  const [rides, setRides] = useState([]);
-  const [rideRequests, setRideRequests] = useState([]);
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
-  const [selectedRideId, setSelectedRideId] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [rideRequest, setRideRequest] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
-    const getCurrentLocation = async () => {
+    if (!requestId || !userDetail?.uid) return;
+
+    // Fetch ride request
+    const unsubscribe = onSnapshot(doc(db, "ride_requests", requestId), (doc) => {
+      if (doc.exists()) {
+        setRideRequest({ id: doc.id, ...doc.data() });
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Ride request no longer exists.",
+        });
+        router.replace("/home");
+      }
+    }, (error) => {
+      console.error("Error fetching ride request:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to load ride request.",
+      });
+    });
+
+    // Update user location
+    const updateLocation = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
-          Alert.alert(
-            "Permission Denied",
-            "Location permission is required to set your current position as the ride origin."
-          );
+          Alert.alert("Permission Denied", "Location permission is required.");
           return;
         }
 
         const location = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,
         });
-
         const { latitude, longitude } = location.coords;
+        setUserLocation({ latitude, longitude });
 
-        const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
-        if (geocode.length > 0) {
-          const { street, city, region, country } = geocode[0];
-          const address = `${street || ""}, ${city || ""}, ${region || ""}, ${country || ""}`
-            .replace(/, ,/g, ",")
-            .replace(/,,/g, ",")
-            .trim();
-          setOrigin(address);
-        } else {
-          setOrigin(`${latitude}, ${longitude}`);
-        }
-      } catch (error) {
-        console.error("Error fetching current location:", error);
-        Alert.alert("Error", "Failed to fetch current location.");
-      }
-    };
-
-    getCurrentLocation();
-  }, []);
-
-  useEffect(() => {
-    // Fetch completed rides from users/{email}/rides
-    const fetchRides = async () => {
-      try {
-        const user = userDetail?.email;
-        if (!user) return;
-        const ridesRef = collection(db, "users", user, "rides");
-        const querySnapshot = await getDocs(ridesRef);
-        const ridesData = [];
-        querySnapshot.forEach((doc) => {
-          ridesData.push({
-            id: doc.id,
-            ...doc.data(),
-          });
+        // Update Firestore with user's location
+        const locationField = userDetail.isDriver ? "driver_location" : "rider_location";
+        await updateDoc(doc(db, "ride_requests", requestId), {
+          [locationField]: { latitude, longitude },
         });
-        setRides(ridesData);
       } catch (error) {
-        console.error("Error fetching rides:", error);
-      }
-    };
-
-    // Fetch pending/accepted ride requests from ride_requests
-    const fetchRideRequests = () => {
-      if (!userDetail?.uid) return;
-      const requestsRef = collection(db, "ride_requests");
-      const unsubscribe = onSnapshot(requestsRef, (querySnapshot) => {
-        const requestsData = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.user_id === userDetail.uid && (data.status === "pending" || data.status === "accepted")) {
-            requestsData.push({
-              id: doc.id,
-              ...data,
-            });
-          }
-        });
-        setRideRequests(requestsData);
-        setSearchModalVisible(requestsData.length > 0 && requestsData[0]?.status === "pending");
-        if (requestsData.length > 0 && requestsData[0].status === "accepted") {
-          setSearchModalVisible(false);
-          router.push(`/RideTracking?requestId=${requestsData[0].id}`);
-        }
-      }, (error) => {
-        console.error("Error fetching ride requests:", error);
+        console.error("Error updating location:", error);
         Toast.show({
           type: "error",
           text1: "Error",
-          text2: "Failed to load ride requests.",
+          text2: "Failed to update location.",
         });
-      });
-
-      return unsubscribe;
+      }
     };
 
-    fetchRides();
-    const unsubscribe = fetchRideRequests();
-    return () => unsubscribe && unsubscribe();
-  }, [userDetail, router]);
+    updateLocation();
+    const interval = setInterval(updateLocation, 30000); // Update every 30 seconds
 
-  const submitRideRequest = async () => {
-    if (!origin || !userDetail?.email) {
-      Alert.alert("Error", "Please select a location and ensure you are logged in.");
-      return;
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, [requestId, userDetail]);
+
+  const cancelRide = async () => {
+    if (!rideRequest) return;
+
+    try {
+      if (userDetail.isDriver) {
+        // Driver resets to pending
+        await updateDoc(doc(db, "ride_requests", rideRequest.id), {
+          status: "pending",
+          driver_id: null,
+          driver: null,
+          driver_location: null,
+        });
+        Toast.show({
+          type: "success",
+          text1: "Ride Cancelled",
+          text2: "You have cancelled the ride.",
+        });
+      } else {
+        // Rider deletes the request
+        await deleteDoc(doc(db, "ride_requests", rideRequest.id));
+        Toast.show({
+          type: "success",
+          text1: "Ride Request Cancelled",
+          text2: "Your ride request has been cancelled.",
+        });
+      }
+      router.replace("/home");
+    } catch (error) {
+      console.error("Error cancelling ride:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to cancel ride.",
+      });
     }
+  };
 
-    // Check for active ride requests
-    const hasActiveRequest = rideRequests.some(
-      (req) => req.status === "pending" || req.status === "accepted"
+  if (!rideRequest || !userLocation) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Loading map...</Text>
+      </View>
     );
-    if (hasActiveRequest) {
-      Alert.alert(
-        "Active Request Exists",
-        "You can only have one active ride request at a time. Please cancel your current request before submitting a new one."
-      );
-      return;
-    }
+  }
 
-    setLoading(true);
-    try {
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      const { latitude, longitude } = location.coords;
-
-      const rideRequest = {
-        riderName: userDetail.name,
-        origin,
-        destination,
-        status: "pending",
-        createdAt: new Date().toISOString(),
-        user_id: userDetail.uid,
-        rider_email: userDetail.email,
-        rider_location: { latitude, longitude },
-      };
-
-      const docRef = await addDoc(collection(db, "ride_requests"), rideRequest);
-      Toast.show({
-        type: "success",
-        text1: "Success",
-        text2: "Ride request submitted successfully!",
-      });
-      setDestination("");
-      setSearchModalVisible(true);
-    } catch (error) {
-      console.error("Error submitting ride request:", error);
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Failed to submit ride request.",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const riderLocation = rideRequest.rider_location || {
+    latitude: parseFloat(rideRequest.origin.split(",")[0]) || 29.6516,
+    longitude: parseFloat(rideRequest.origin.split(",")[1]) || -82.3248,
   };
+  const driverLocation = rideRequest.driver_location || userLocation;
 
-  const cancelRideRequest = async (requestId) => {
-    try {
-      await deleteDoc(doc(db, "ride_requests", requestId));
-      setRideRequests([]);
-      setSearchModalVisible(false);
-      Toast.show({
-        type: "success",
-        text1: "Ride Request Cancelled",
-        text2: "Your ride request has been successfully cancelled.",
-      });
-    } catch (error) {
-      console.error("Error cancelling ride request:", error);
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Failed to cancel ride request.",
-      });
-    }
+  const region = {
+    latitude: riderLocation.latitude,
+    longitude: riderLocation.longitude,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
   };
-
-  const renderRideCard = ({ item }) => (
-    <RideCard
-      rideData={{
-        ...item,
-        status: item.status || "completed",
-      }}
-      onSelect={() => setSelectedRideId(item.id)}
-      isSelected={selectedRideId === item.id}
-    />
-  );
-
-  const hasActiveRequest = rideRequests.some(
-    (req) => req.status === "pending" || req.status === "accepted"
-  );
 
   return (
     <View style={styles.container}>
-      <Image
-        source={require('../../assets/images/logo.png')}
-        style={styles.logo}
-      />
-      <View style={styles.searchContainer}>
-        <GooglePlacesInput
-          onPlaceSelected={(description) => setDestination(description)}
-          value={destination}
-          placeholder="Where are you headed?"
+      <MapView style={styles.map} region={region} provider={PROVIDER_DEFAULT}>
+        <Marker
+          coordinate={riderLocation}
+          title="Rider"
+          description={rideRequest.riderName}
+          pinColor="red"
         />
-        <TouchableOpacity
-          style={[styles.submitButton, (loading || hasActiveRequest) && styles.disabledButton]}
-          onPress={submitRideRequest}
-          disabled={loading || hasActiveRequest}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? "Submitting..." : "Submit Ride Request"}
-          </Text>
-        </TouchableOpacity>
-        {hasActiveRequest && (
-          <Text style={styles.disabledText}>
-            Only one active ride request allowed at a time.
-          </Text>
+        {driverLocation && (
+          <Marker
+            coordinate={driverLocation}
+            title="Driver"
+            description={rideRequest.driver?.first_name || "Driver"}
+            pinColor="blue"
+          />
         )}
+      </MapView>
+      <View style={styles.infoContainer}>
+        <Text style={styles.infoText}>
+          {userDetail.isDriver
+            ? `Rider: ${rideRequest.riderName}`
+            : `Driver: ${rideRequest.driver.first_name} ${rideRequest.driver.last_name}`}
+        </Text>
+        <Text style={styles.infoText}>From: {rideRequest.origin}</Text>
+        <Text style={styles.infoText}>To: {rideRequest.destination}</Text>
       </View>
-      <View style={styles.ridesContainer}>
-        <Text style={styles.sectionTitle}>Completed Rides</Text>
-        <FlatList
-          data={rides}
-          renderItem={renderRideCard}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No completed rides found.</Text>
-          }
-        />
-      </View>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={searchModalVisible}
-        onRequestClose={() => setSearchModalVisible(false)}
+      <TouchableOpacity
+        style={[styles.cancelButton, userDetail.isDriver ? styles.driverCancel : styles.riderCancel]}
+        onPress={cancelRide}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Searching for Driver</Text>
-            <ActivityIndicator size="large" color="#f3400d" style={styles.loader} />
-            <Text style={styles.modalText}>
-              Please wait while we find a driver for your ride.
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => rideRequests[0] && cancelRideRequest(rideRequests[0].id)}
-              >
-                <Text style={styles.modalButtonText}>Cancel Request</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        <Text style={styles.cancelButtonText}>
+          {userDetail.isDriver ? "Cancel Ride" : "Cancel Request"}
+        </Text>
+      </TouchableOpacity>
       <Toast config={toastConfig} />
     </View>
   );
@@ -281,132 +181,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0b1e7d",
-    alignItems: "center",
   },
-  logo: {
-    width: 180,
-    height: 90,
+  map: {
+    flex: 1,
+  },
+  infoContainer: {
+    backgroundColor: "#1a2a9b",
+    padding: 15,
+    borderRadius: 10,
+    margin: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  infoText: {
+    color: "#fff",
+    fontFamily: "oswald-bold",
+    fontSize: 16,
     marginBottom: 5,
   },
-  searchContainer: {
-    width: "90%",
-    alignItems: "center",
-    backgroundColor: "#1a2a9b",
-    borderRadius: 10,
+  cancelButton: {
     padding: 15,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  ridesContainer: {
-    flex: 1,
+    borderRadius: 10,
+    margin: 10,
     alignItems: "center",
-    width: "90%",
-    backgroundColor: "#1a2a9b",
-    borderRadius: 15,
-    padding: 12.5,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
   },
-  sectionTitle: {
-    color: "white",
+  riderCancel: {
+    backgroundColor: "#f3400d",
+  },
+  driverCancel: {
+    backgroundColor: "#888",
+  },
+  cancelButtonText: {
+    color: "#fff",
     fontFamily: "oswald-bold",
-    fontSize: 24,
-    marginBottom: 15,
-    textAlign: "center",
+    fontSize: 18,
+    textTransform: "uppercase",
   },
-  emptyText: {
+  loadingText: {
     color: "#fff",
     fontFamily: "oswald-bold",
     fontSize: 18,
     textAlign: "center",
     marginTop: 20,
-  },
-  submitButton: {
-    backgroundColor: "#f3400d",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginTop: 10,
-    width: "90%",
-    alignItems: "center",
-  },
-  buttonText: {
-    fontFamily: "oswald-bold",
-    fontSize: 18,
-    color: "#fff",
-    textAlign: "center",
-    textTransform: "uppercase",
-  },
-  disabledButton: {
-    backgroundColor: "#a0a0a0",
-    opacity: 0.6,
-  },
-  disabledText: {
-    color: "#fff",
-    fontFamily: "oswald-bold",
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: '80%',
-    backgroundColor: '#1a2a9b',
-    borderRadius: 10,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalTitle: {
-    color: '#eb7f05',
-    fontFamily: 'oswald-bold',
-    fontSize: 22,
-    textAlign: 'center',
-    marginBottom: 15,
-  },
-  modalText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  modalButton: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  cancelButton: {
-    backgroundColor: '#888',
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
-    fontSize: 16,
-  },
-  loader: {
-    marginBottom: 10,
   },
 });
