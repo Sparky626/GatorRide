@@ -84,8 +84,8 @@ export default function DriverHome() {
         text2: "You have accepted the ride request.",
       });
 
-      // Navigate to RideTracking
-      router.push(`pages/RideTracking?requestId=${rideId}`);
+      // Navigate to DriverTracking
+      router.push(`pages/DriverTracking?requestId=${rideId}`);
     } catch (error) {
       console.error("Error accepting ride:", error);
       Toast.show({
