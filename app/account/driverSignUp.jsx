@@ -1,9 +1,10 @@
-import { Text, View, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Platform } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, TextInput, TouchableWithoutFeedback, Keyboard, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useContext } from "react";
 import { UserDetailContext } from "../../context/UserDetailContext";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "../../config/firebaseConfig";
+import { db, storage } from "../../config/firebaseConfig";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Toast from "react-native-toast-message";
 import toastConfig from "../../config/toastConfig";
 import DropDownPicker from "react-native-dropdown-picker";
@@ -19,21 +20,62 @@ export default function DriverSignUp() {
   const [licensePlate, setLicensePlate] = useState("");
   const [capacity, setCapacity] = useState("");
   const [color, setColor] = useState("");
-  const [open, setOpen] = useState(false);
+  const [variant, setVariant] = useState(null);
+  const [bodySize, setBodySize] = useState(null);
+  const [openGasType, setOpenGasType] = useState(false);
+  const [openVariant, setOpenVariant] = useState(false);
+  const [openBodySize, setOpenBodySize] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState([
+  const [gasTypeItems, setGasTypeItems] = useState([
     { label: "Regular", value: "Regular" },
     { label: "Midgrade", value: "Midgrade" },
     { label: "Premium", value: "Premium" },
     { label: "Diesel", value: "Diesel" },
   ]);
+  const [variantItems, setVariantItems] = useState([
+    { label: "Sedan", value: "sedan" },
+    { label: "SUV", value: "suv" },
+    { label: "Coupe", value: "coupe" },
+    { label: "Hatchback", value: "hatchback" },
+  ]);
+  const [bodySizeItems, setBodySizeItems] = useState([
+    { label: "2", value: "2" },
+    { label: "4", value: "4" },
+  ]);
+
+  const FALLBACK_IMAGE_URL = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"; // Replace with Firebase Storage URL
+
+  const fetchCarImage = async (make, model, year, color, variant, bodySize) => {
+    try {
+      const params = new URLSearchParams({
+        customer: "img",
+        zoomType: "fullscreen",
+        paintdescription: color.toLowerCase(),
+        modelFamily: model,
+        make,
+        modelVariant: variant,
+        modelYear: year,
+        bodySize,
+        angle: "01",
+      });
+      const url = `https://cdn.imagin.studio/getimage?${params.toString()}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Imagin.Studio API error: ${response.statusText}`);
+      }
+      return url;
+    } catch (error) {
+      console.warn("Failed to fetch car image:", error);
+      return FALLBACK_IMAGE_URL;
+    }
+  };
 
   const handleSignUp = async () => {
-    if (!carModel || !carMake || !carYear || !mpg || !gasType || !licensePlate || !capacity || !color) {
+    if (!carModel || !carMake || !carYear || !mpg || !gasType || !licensePlate || !capacity || !color || !variant || !bodySize) {
       Toast.show({
         type: "error",
         text1: "Error!",
-        text2: "Please fill in all fields",
+        text2: "Please fill all fields",
       });
       return;
     }
@@ -88,12 +130,33 @@ export default function DriverSignUp() {
         gas_type: gasType,
         license_plate: licensePlate,
         capacity: parseInt(capacity),
-        color: color,
+        color,
+        variant,
+        body_size: parseInt(bodySize),
         user_id: uid,
       };
 
-      // Update user document with driver status and car details
-      const userRef = doc(db, "users", user);
+      const carImageUrl = await fetchCarImage(carMake, carModel, carYear, color, variant, bodySize);
+      console.log("Car image URL:", carImageUrl);
+
+      const response = await fetch(carImageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch car image: ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      console.log("Car image Blob:", { type: blob.type, size: blob.size });
+
+      const fileExtension = blob.type.split("/")[1] || "jpg";
+      const storageRef = ref(storage, `car_images/${vehicleId}.${fileExtension}`);
+      await uploadBytes(storageRef, blob, { metadata: { user_id: uid } });
+      console.log("Car image uploaded to Storage");
+
+      const downloadURL = await getDownloadURL(storageRef);
+      console.log("Car image download URL:", downloadURL);
+
+      vehicleData.image_url = downloadURL;
+
+      const userRef = doc(db, "users", userDetail.email);
       await setDoc(
         userRef,
         {
@@ -106,7 +169,6 @@ export default function DriverSignUp() {
         { merge: true }
       );
 
-      // Update context
       setUserDetail({
         ...userDetail,
         driver: true,
@@ -121,66 +183,97 @@ export default function DriverSignUp() {
 
       router.push("/(tabs)/profile");
     } catch (error) {
+      console.error("Error signing up as driver:", error, JSON.stringify(error, null, 2));
       Toast.show({
         type: "error",
         text1: "Error!",
-        text2: "Failed to sign up as driver",
+        text2: `Failed to sign up: ${error.message}`,
       });
-      console.error("Error signing up as driver:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.contentContainer}>
-          <TouchableOpacity
-            onPress={() => router.push("/(tabs)/profile")}
-            style={styles.backButton}
-          >
-            <Text style={styles.backText}>BACK</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Become a Driver</Text>
-          <View style={styles.formContainer}>
-            <Text style={styles.sectionTitle}>Vehicle Information</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Car Make (e.g., Toyota)"
-              placeholderTextColor="#888"
-              value={carMake}
-              onChangeText={setCarMake}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/profile")}
+          style={styles.backButton}
+        >
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Driver Signup</Text>
+        <View style={styles.formContainer}>
+          <Text style={styles.sectionTitle}>Vehicle Information</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Make (e.g., MercedesBenz)"
+            placeholderTextColor="#888"
+            value={carMake}
+            onChangeText={setCarMake}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Model (e.g., C300)"
+            placeholderTextColor="#888"
+            value={carModel}
+            onChangeText={setCarModel}
+          />
+          <View style={styles.inputRow}>
+          <View style={[styles.pickerContainer, styles.inputHalf]}>
+            <DropDownPicker
+              open={openVariant}
+              value={variant}
+              items={variantItems}
+              setOpen={setOpenVariant}
+              setValue={setVariant}
+              setItems={setVariantItems}
+              placeholder="Vehicle Type"
+              style={styles.picker}
+              textStyle={styles.pickerText}
+              dropDownContainerStyle={styles.dropDown}
+              zIndex={3000}
+              placeholderStyle={styles.pickerPlaceholder}
+              arrowIconStyle={styles.arrowIcon}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Car Model (e.g., Camry)"
-              placeholderTextColor="#888"
-              value={carModel}
-              onChangeText={setCarModel}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Car Year (e.g., 2020)"
+          </View>
+            <View style={[styles.pickerContainer, styles.inputHalf]}>
+              <DropDownPicker
+                open={openBodySize}
+                value={bodySize}
+                items={bodySizeItems}
+                setOpen={setOpenBodySize}
+                setValue={setBodySize}
+                setItems={setBodySizeItems}
+                placeholder="Doors"
+                style={styles.picker}
+                textStyle={styles.pickerText}
+                dropDownContainerStyle={styles.dropDown}
+                zIndex={2000}
+                placeholderStyle={styles.pickerPlaceholder}
+                arrowIconStyle={styles.arrowIcon}
+              />
+            </View>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Color (e.g., Black)"
+            placeholderTextColor="#888"
+            value={color}
+            onChangeText={setColor}
+          />
+          <TextInput
+              style={[styles.input]}
+              placeholder="Year (e.g., 2018)"
               placeholderTextColor="#888"
               value={carYear}
               onChangeText={setCarYear}
               keyboardType="numeric"
             />
+          <View style={styles.inputRow}>
             <TextInput
-              style={styles.input}
-              placeholder="Color (e.g., Blue)"
-              placeholderTextColor="#888"
-              value={color}
-              onChangeText={setColor}
-            />
-            <Text style={styles.sectionTitle}>Vehicle Specifications</Text>
-            <TextInput
-              style={styles.input}
+              style={[styles.input, styles.inputHalf]}
               placeholder="MPG (e.g., 30)"
               placeholderTextColor="#888"
               value={mpg}
@@ -188,53 +281,52 @@ export default function DriverSignUp() {
               keyboardType="numeric"
             />
             <TextInput
-              style={styles.input}
-              placeholder="Capacity (e.g., 4)"
+              style={[styles.input, styles.inputHalf]}
+              placeholder="Seats (e.g., 4)"
               placeholderTextColor="#888"
               value={capacity}
               onChangeText={setCapacity}
               keyboardType="numeric"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="License Plate (e.g., ABC1234)"
-              placeholderTextColor="#888"
-              value={licensePlate}
-              onChangeText={setLicensePlate}
-            />
-            <View style={styles.pickerContainer}>
-              <Text style={styles.label}>Gas Type</Text>
-              <DropDownPicker
-                open={open}
-                value={gasType}
-                items={items}
-                setOpen={setOpen}
-                setValue={setGasType}
-                setItems={setItems}
-                placeholder="Select gas type"
-                style={styles.picker}
-                textStyle={styles.pickerText}
-                dropDownContainerStyle={styles.dropDown}
-                zIndex={1000}
-                placeholderStyle={styles.pickerPlaceholder}
-                arrowIconStyle={styles.arrowIcon}
-              />
-            </View>
-            <TouchableOpacity
-              style={[styles.submitButton, loading && styles.disabledButton]}
-              onPress={handleSignUp}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.submitText}>
-                {loading ? "Processing..." : "Sign Up as Driver"}
-              </Text>
-            </TouchableOpacity>
           </View>
-          <Toast config={toastConfig} />
+          <TextInput
+            style={styles.input}
+            placeholder="License Plate (e.g., ABC1234)"
+            placeholderTextColor="#888"
+            value={licensePlate}
+            onChangeText={setLicensePlate}
+          />
+          <View style={styles.pickerContainer}>
+            <DropDownPicker
+              open={openGasType}
+              value={gasType}
+              items={gasTypeItems}
+              setOpen={setOpenGasType}
+              setValue={setGasType}
+              setItems={setGasTypeItems}
+              placeholder="Fuel Type"
+              style={styles.picker}
+              textStyle={styles.pickerText}
+              dropDownContainerStyle={styles.dropDown}
+              zIndex={1000}
+              placeholderStyle={styles.pickerPlaceholder}
+              arrowIconStyle={styles.arrowIcon}
+            />
+          </View>
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.disabledButton]}
+            onPress={handleSignUp}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.submitText}>
+              {loading ? "Processing..." : "Sign Up"}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        <Toast config={toastConfig} />
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -242,119 +334,106 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0b1e7d",
-  },
-  contentContainer: {
-    flexGrow: 1,
-    padding: 20,
-    paddingBottom: 40,
+    padding: 12,
+    justifyContent: "flex-start",
+    paddingBottom: 15,
   },
   backButton: {
     alignSelf: "flex-start",
-    marginTop: (Platform.OS === 'ios') ? 40 : 0,
+    marginTop: Platform.OS === "ios" ? 40 : 8,
   },
   backText: {
     color: "#f3400d",
     fontFamily: "oswald-bold",
-    fontSize: 20,
+    fontSize: 25,
     textTransform: "uppercase",
   },
   title: {
     color: "#eb7f05",
     fontFamily: "oswald-bold",
-    fontSize: 32,
-    marginBottom: 20,
+    fontSize: 35,
     textAlign: "center",
+    marginTop: 15,
+    marginBottom: 40,
   },
   formContainer: {
     backgroundColor: "#1a2a9b",
-    borderRadius: 15,
-    padding: 15,
+    borderRadius: 10,
+    padding: 12,
     width: "100%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   sectionTitle: {
     color: "#eb7f05",
     fontFamily: "oswald-bold",
-    fontSize: 22,
-    marginBottom: 10,
-    marginTop: 10,
+    fontSize: 20,
+    marginBottom: 20,
+    marginTop: 5,
   },
   input: {
     backgroundColor: "#fef0da",
-    width: "100%",
     padding: 10,
-    borderRadius: 10,
-    marginBottom: 15,
+    borderRadius: 8,
+    marginBottom: 10,
     fontFamily: "oswald-bold",
     fontSize: 16,
     color: "#0b1e7d",
     borderWidth: 1,
     borderColor: "#fef0da",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    height: 49.5,
+  },
+  inputRow: {
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  inputHalf: {
+    height: 49.5,
+    width: "49.5%",
   },
   pickerContainer: {
-    width: "100%",
-    marginBottom: 20,
-  },
-  label: {
-    color: "#eb7f05",
-    fontFamily: "oswald-bold",
-    fontSize: 16,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   picker: {
     backgroundColor: "#fef0da",
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#fef0da",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    height: 49.5,
   },
   pickerText: {
     fontFamily: "oswald-bold",
     color: "#0b1e7d",
-    fontSize: 16,
+    fontSize: 14,
   },
   pickerPlaceholder: {
     fontFamily: "oswald-bold",
     color: "#888",
-    fontSize: 16,
+    fontSize: 14,
   },
   dropDown: {
     backgroundColor: "#fef0da",
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#fef0da",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
   },
   arrowIcon: {
     tintColor: "#0b1e7d",
   },
   submitButton: {
     backgroundColor: "#f3400d",
-    padding: 15,
-    borderRadius: 10,
-    width: "100%",
+    padding: 10,
+    borderRadius: 8,
     alignItems: "center",
+    marginTop: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   disabledButton: {
     backgroundColor: "#888",
@@ -362,7 +441,7 @@ const styles = StyleSheet.create({
   submitText: {
     color: "#fef0da",
     fontFamily: "oswald-bold",
-    fontSize: 20,
+    fontSize: 16,
     textTransform: "uppercase",
   },
 });
