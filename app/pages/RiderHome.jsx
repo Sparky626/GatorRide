@@ -1,7 +1,7 @@
 import { Text, View, StyleSheet, FlatList, Image, TouchableOpacity, Alert, Modal, ActivityIndicator } from "react-native";
 import React, { useState, useEffect, useContext } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { collection, getDocs, addDoc, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, addDoc, deleteDoc, onSnapshot, doc } from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import GooglePlacesInput from "../components/GooglePlacesInput";
 import RideCard from "../components/RideCard";
@@ -19,7 +19,9 @@ export default function RiderHome() {
   const [destination, setDestination] = useState("");
   const [selectedRideId, setSelectedRideId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Prevent multiple clicks
   const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [modalRequestId, setModalRequestId] = useState(null); // Track request tied to modal
 
   useEffect(() => {
     const getCurrentLocation = async () => {
@@ -95,10 +97,19 @@ export default function RiderHome() {
             });
           }
         });
+        console.log("Ride requests updated:", requestsData);
         setRideRequests(requestsData);
-        setSearchModalVisible(requestsData.length > 0 && requestsData[0]?.status === "pending");
+        // Only show modal for the first pending request and if it's a new request
+        if (requestsData.length > 0 && requestsData[0].status === "pending" && requestsData[0].id !== modalRequestId) {
+          setSearchModalVisible(true);
+          setModalRequestId(requestsData[0].id);
+        } else if (requestsData.length === 0 || requestsData[0].status !== "pending") {
+          setSearchModalVisible(false);
+          setModalRequestId(null);
+        }
         if (requestsData.length > 0 && requestsData[0].status === "accepted") {
           setSearchModalVisible(false);
+          setModalRequestId(null);
           router.push(`pages/RiderTracking?requestId=${requestsData[0].id}`);
         }
       }, (error) => {
@@ -124,20 +135,27 @@ export default function RiderHome() {
       return;
     }
 
-    // Check for active ride requests
-    const hasActiveRequest = rideRequests.some(
-      (req) => req.status === "pending" || req.status === "accepted"
-    );
-    if (hasActiveRequest) {
-      Alert.alert(
-        "Active Request Exists",
-        "You can only have one active ride request at a time. Please cancel your current request before submitting a new one."
-      );
+    if (isSubmitting) {
+      console.log("Submit ignored: already submitting");
       return;
     }
 
+    setIsSubmitting(true);
     setLoading(true);
     try {
+      // Re-check for active requests to avoid race conditions
+      const hasActiveRequest = rideRequests.some(
+        (req) => req.status === "pending" || req.status === "accepted"
+      );
+      if (hasActiveRequest) {
+        Alert.alert(
+          "Active Request Exists",
+          "You can only have one active ride request at a time. Please cancel your current request before submitting a new one."
+        );
+        return;
+      }
+
+      console.log("Submitting ride request:", { origin, destination });
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
@@ -161,7 +179,6 @@ export default function RiderHome() {
         text2: "Ride request submitted successfully!",
       });
       setDestination("");
-      setSearchModalVisible(true);
     } catch (error) {
       console.error("Error submitting ride request:", error);
       Toast.show({
@@ -171,14 +188,27 @@ export default function RiderHome() {
       });
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const cancelRideRequest = async (requestId) => {
+    if (!requestId) {
+      console.error("Invalid requestId for cancellation");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Invalid ride request ID.",
+      });
+      return;
+    }
+
     try {
+      console.log("Cancelling ride request:", requestId);
       await deleteDoc(doc(db, "ride_requests", requestId));
       setRideRequests([]);
       setSearchModalVisible(false);
+      setModalRequestId(null);
       Toast.show({
         type: "success",
         text1: "Ride Request Cancelled",
@@ -222,9 +252,9 @@ export default function RiderHome() {
           placeholder="Where are you headed?"
         />
         <TouchableOpacity
-          style={[styles.submitButton, (loading || hasActiveRequest) && styles.disabledButton]}
+          style={[styles.submitButton, (loading || hasActiveRequest || isSubmitting) && styles.disabledButton]}
           onPress={submitRideRequest}
-          disabled={loading || hasActiveRequest}
+          disabled={loading || hasActiveRequest || isSubmitting}
         >
           <Text style={styles.buttonText}>
             {loading ? "Submitting..." : "Submit Ride Request"}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Modal } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { UserDetailContext } from "@/context/UserDetailContext";
@@ -20,6 +20,9 @@ export default function DriverTracking() {
   const [riderLocation, setRiderLocation] = useState(null);
   const [destinationCoords, setDestinationCoords] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState(null);
+  const [pickupModalVisible, setPickupModalVisible] = useState(false);
+  const [hasShownPickupModal, setHasShownPickupModal] = useState(false);
+  const [timer, setTimer] = useState(5);
 
   useEffect(() => {
     if (!requestId || !userDetail?.uid) return;
@@ -84,7 +87,6 @@ export default function DriverTracking() {
     };
   }, [requestId, userDetail]);
 
-  // Geocode destination
   useEffect(() => {
     if (!rideRequest?.destination) {
       setDestinationCoords(null);
@@ -99,7 +101,6 @@ export default function DriverTracking() {
     resolveDestination();
   }, [rideRequest?.destination]);
 
-  // Resolve riderLocation
   useEffect(() => {
     if (!rideRequest) {
       setRiderLocation(null);
@@ -119,6 +120,51 @@ export default function DriverTracking() {
 
     resolveRiderLocation();
   }, [rideRequest?.rider_location, rideRequest?.origin]);
+
+  useEffect(() => {
+    if (
+      !userLocation ||
+      !riderLocation ||
+      hasShownPickupModal ||
+      rideRequest?.status === "picked_up"
+    ) {
+      return;
+    }
+
+    const calculateDistance = (loc1, loc2) => {
+      const toRad = (value) => (value * Math.PI) / 180;
+      const R = 6371e3;
+      const lat1 = loc1.latitude;
+      const lat2 = loc2.latitude;
+      const lon1 = loc1.longitude;
+      const lon2 = loc2.longitude;
+
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    const distance = calculateDistance(userLocation, riderLocation);
+    if (distance <= 50) {
+      setPickupModalVisible(true);
+      setHasShownPickupModal(true);
+      setTimer(5);
+    }
+  }, [userLocation, riderLocation, hasShownPickupModal, rideRequest?.status]);
+
+  useEffect(() => {
+    if (!pickupModalVisible || timer <= 0) return;
+
+    const interval = setInterval(() => {
+      setTimer((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [pickupModalVisible, timer]);
 
   const parseCoordinates = async (coordString) => {
     console.log("Parsing coordinates:", coordString);
@@ -141,11 +187,10 @@ export default function DriverTracking() {
         text1: "Error",
         text2: "Invalid address.",
       });
-      return { latitude: 29.6516, longitude: -82.3248 }; // Default to Gainesville, FL
+      return { latitude: 29.6516, longitude: -82.3248 };
     }
   };
 
-  // Fetch route for Polyline fallback
   useEffect(() => {
     if (!riderLocation || !destinationCoords) {
       setRouteCoordinates(null);
@@ -207,6 +252,28 @@ export default function DriverTracking() {
     );
   };
 
+  const confirmPickup = async () => {
+    if (!rideRequest) return;
+    try {
+      await updateDoc(doc(db, "ride_requests", rideRequest.id), {
+        status: "picked_up",
+      });
+      Toast.show({
+        type: "success",
+        text1: "Pickup Confirmed",
+        text2: "You have confirmed picking up the rider.",
+      });
+      setPickupModalVisible(false);
+    } catch (error) {
+      console.error("Error confirming pickup:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to confirm pickup.",
+      });
+    }
+  };
+
   if (!rideRequest || !userLocation || !riderLocation || !region) {
     return (
       <View style={styles.container}>
@@ -224,7 +291,7 @@ export default function DriverTracking() {
         provider={PROVIDER_DEFAULT}
         showsUserLocation={true}
       >
-        {riderLocation && (
+        {rideRequest.status !== "picked_up" && riderLocation && (
           <Marker
             coordinate={riderLocation}
             title="Rider"
@@ -278,6 +345,28 @@ export default function DriverTracking() {
       <TouchableOpacity style={[styles.cancelButton, styles.driverCancel]} onPress={cancelRide}>
         <Text style={styles.cancelButtonText}>Cancel Ride</Text>
       </TouchableOpacity>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={pickupModalVisible}
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Have you picked up the rider?</Text>
+            <Text style={styles.modalText}>Rider: {rideRequest?.riderName || "N/A"}</Text>
+            <TouchableOpacity
+              style={[styles.confirmButton, timer > 0 && styles.disabledButton]}
+              onPress={confirmPickup}
+              disabled={timer > 0}
+            >
+              <Text style={styles.confirmButtonText}>
+                Yes {timer > 0 ? `(${timer}s)` : ""}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Toast config={toastConfig} />
     </View>
   );
@@ -334,5 +423,48 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: "center",
     marginTop: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#1a2a9b",
+    borderRadius: 15,
+    padding: 20,
+    alignItems: "center",
+    width: "80%",
+  },
+  modalTitle: {
+    color: "#eb7f05",
+    fontFamily: "oswald-bold",
+    fontSize: 20,
+    marginBottom: 10,
+  },
+  modalText: {
+    color: "#fff",
+    fontFamily: "oswald-bold",
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  confirmButton: {
+    backgroundColor: "#eb7f05",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: "center",
+  },
+  confirmButtonText: {
+    color: "#fff",
+    fontFamily: "oswald-bold",
+    fontSize: 16,
+    textTransform: "uppercase",
+  },
+  disabledButton: {
+    backgroundColor: "#888",
+    opacity: 0.6,
   },
 });

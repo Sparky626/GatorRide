@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, Modal } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { UserDetailContext } from "@/context/UserDetailContext";
@@ -20,6 +20,10 @@ export default function RiderTracking() {
   const [riderLocation, setRiderLocation] = useState(null);
   const [destinationCoords, setDestinationCoords] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState(null);
+  const [arrivalModalVisible, setArrivalModalVisible] = useState(false);
+  const [hasShownArrivalModal, setHasShownArrivalModal] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [timer, setTimer] = useState(5);
 
   useEffect(() => {
     if (!requestId || !userDetail?.uid) return;
@@ -28,7 +32,9 @@ export default function RiderTracking() {
       doc(db, "ride_requests", requestId),
       (doc) => {
         if (doc.exists()) {
-          setRideRequest({ id: doc.id, ...doc.data() });
+          const data = { id: doc.id, ...doc.data() };
+          setRideRequest(data);
+          console.log("Driver car image URL:", data?.driver?.car_details?.image_url);
         } else {
           Toast.show({
             type: "error",
@@ -84,7 +90,6 @@ export default function RiderTracking() {
     };
   }, [requestId, userDetail]);
 
-  // Geocode destination
   useEffect(() => {
     if (!rideRequest?.destination) {
       setDestinationCoords(null);
@@ -99,7 +104,6 @@ export default function RiderTracking() {
     resolveDestination();
   }, [rideRequest?.destination]);
 
-  // Resolve riderLocation
   useEffect(() => {
     if (!rideRequest) {
       setRiderLocation(null);
@@ -119,6 +123,51 @@ export default function RiderTracking() {
 
     resolveRiderLocation();
   }, [rideRequest?.rider_location, rideRequest?.origin]);
+
+  useEffect(() => {
+    if (
+      !rideRequest?.driver_location ||
+      !riderLocation ||
+      hasShownArrivalModal ||
+      rideRequest.status === "picked_up"
+    ) {
+      return;
+    }
+
+    const calculateDistance = (loc1, loc2) => {
+      const toRad = (value) => (value * Math.PI) / 180;
+      const R = 6371e3;
+      const lat1 = loc1.latitude;
+      const lat2 = loc2.latitude;
+      const lon1 = loc1.longitude;
+      const lon2 = loc2.longitude;
+
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    const distance = calculateDistance(rideRequest.driver_location, riderLocation);
+    if (distance <= 50) {
+      setArrivalModalVisible(true);
+      setHasShownArrivalModal(true);
+      setTimer(5);
+    }
+  }, [rideRequest?.driver_location, riderLocation, hasShownArrivalModal, rideRequest?.status]);
+
+  useEffect(() => {
+    if (!arrivalModalVisible || timer <= 0) return;
+
+    const interval = setInterval(() => {
+      setTimer((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [arrivalModalVisible, timer]);
 
   const parseCoordinates = async (coordString) => {
     console.log("Parsing coordinates:", coordString);
@@ -141,11 +190,10 @@ export default function RiderTracking() {
         text1: "Error",
         text2: "Invalid address.",
       });
-      return { latitude: 29.6516, longitude: -82.3248 }; // Default to Gainesville, FL
+      return { latitude: 29.6516, longitude: -82.3248 };
     }
   };
 
-  // Fetch route for Polyline fallback
   useEffect(() => {
     if (!riderLocation || !destinationCoords) {
       setRouteCoordinates(null);
@@ -202,6 +250,15 @@ export default function RiderTracking() {
     );
   };
 
+  const handleImageError = () => {
+    setImageError(true);
+    Toast.show({
+      type: "error",
+      text1: "Error",
+      text2: "Failed to load car image.",
+    });
+  };
+
   if (!rideRequest || !userLocation || !riderLocation || !region) {
     return (
       <View style={styles.container}>
@@ -219,7 +276,7 @@ export default function RiderTracking() {
         provider={PROVIDER_DEFAULT}
         showsUserLocation={true}
       >
-        {rideRequest.driver_location && (
+        {rideRequest.status !== "picked_up" && rideRequest.driver_location && (
           <Marker
             coordinate={rideRequest.driver_location}
             title="Driver"
@@ -271,10 +328,46 @@ export default function RiderTracking() {
         </Text>
         <Text style={styles.infoText}>From: {rideRequest.origin}</Text>
         <Text style={styles.infoText}>To: {rideRequest.destination}</Text>
+        {rideRequest.driver?.car_details?.image_url && !imageError ? (
+          <Image
+            source={{ uri: rideRequest.driver.car_details.image_url }}
+            style={styles.carImage}
+            resizeMode="contain"
+            onError={handleImageError}
+          />
+        ) : (
+          <View style={styles.placeholderImage}>
+            <Text style={styles.placeholderText}>No Car Image Available</Text>
+          </View>
+        )}
       </View>
       <TouchableOpacity style={[styles.cancelButton, styles.riderCancel]} onPress={cancelRide}>
         <Text style={styles.cancelButtonText}>Cancel Request</Text>
       </TouchableOpacity>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={arrivalModalVisible}
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Driver Has Arrived!</Text>
+            <Text style={styles.modalText}>
+              License Plate: {rideRequest?.driver?.car_details?.license_plate || "N/A"}
+            </Text>
+            <TouchableOpacity
+              style={[styles.closeButton, timer > 0 && styles.disabledButton]}
+              onPress={() => setArrivalModalVisible(false)}
+              disabled={timer > 0}
+            >
+              <Text style={styles.closeButtonText}>
+                OK {timer > 0 ? `(${timer}s)` : ""}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Toast config={toastConfig} />
     </View>
   );
@@ -309,6 +402,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 5,
   },
+  carImage: {
+    width: "100%",
+    height: 120,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#eb7f05",
+    marginTop: 10,
+  },
+  placeholderImage: {
+    width: "100%",
+    height: 120,
+    borderRadius: 10,
+    backgroundColor: "#0b1e7d",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#eb7f05",
+    marginTop: 10,
+  },
+  placeholderText: {
+    color: "#fff",
+    fontFamily: "oswald-bold",
+    fontSize: 16,
+  },
   cancelButton: {
     padding: 15,
     borderRadius: 10,
@@ -331,5 +448,48 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: "center",
     marginTop: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#1a2a9b",
+    borderRadius: 15,
+    padding: 20,
+    alignItems: "center",
+    width: "80%",
+  },
+  modalTitle: {
+    color: "#eb7f05",
+    fontFamily: "oswald-bold",
+    fontSize: 20,
+    marginBottom: 10,
+  },
+  modalText: {
+    color: "#fff",
+    fontFamily: "oswald-bold",
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  closeButton: {
+    backgroundColor: "#f3400d",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: "#fff",
+    fontFamily: "oswald-bold",
+    fontSize: 16,
+    textTransform: "uppercase",
+  },
+  disabledButton: {
+    backgroundColor: "#888",
+    opacity: 0.6,
   },
 });
