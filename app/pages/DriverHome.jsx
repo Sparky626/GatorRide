@@ -25,6 +25,7 @@ export default function DriverHome() {
           ...doc.data(),
         });
       });
+      console.log("DriverHome ride requests:", JSON.stringify(requestsData, null, 2));
       setRideRequests(requestsData);
     }, (error) => {
       console.error("Error fetching ride requests:", error);
@@ -52,6 +53,7 @@ export default function DriverHome() {
       const rideId = selectedRequest.id;
       const driver = {
         driver_id: userDetail.uid,
+        driver_email: userDetail.email,
         first_name: userDetail.name?.split(" ")[0] || "Driver",
         last_name: userDetail.name?.split(" ").slice(1).join(" ") || "",
         car_details: userDetail.car_details || {
@@ -69,12 +71,16 @@ export default function DriverHome() {
         rating: userDetail.rating || "N/A",
       };
 
-      // Update the ride request in ride_requests
-      await updateDoc(doc(db, "ride_requests", rideId), {
+      console.log("Accepting ride with driver data:", JSON.stringify(driver, null, 2));
+      const updateData = {
         status: "accepted",
         driver_id: userDetail.uid,
+        driver_email: userDetail.email,
         driver,
-      });
+      };
+      console.log("Updating ride request:", JSON.stringify(updateData, null, 2));
+
+      await updateDoc(doc(db, "ride_requests", rideId), updateData);
 
       setModalVisible(false);
       setSelectedRequest(null);
@@ -84,7 +90,6 @@ export default function DriverHome() {
         text2: "You have accepted the ride request.",
       });
 
-      // Navigate to DriverTracking
       router.push(`pages/DriverTracking?requestId=${rideId}`);
     } catch (error) {
       console.error("Error accepting ride:", error);

@@ -22,6 +22,9 @@ export default function DriverTracking() {
   const [routeCoordinates, setRouteCoordinates] = useState(null);
   const [pickupModalVisible, setPickupModalVisible] = useState(false);
   const [hasShownPickupModal, setHasShownPickupModal] = useState(false);
+  const [destinationModalVisible, setDestinationModalVisible] = useState(false);
+  const [hasShownDestinationModal, setHasShownDestinationModal] = useState(false);
+  const [pickupConfirmedAt, setPickupConfirmedAt] = useState(null);
   const [timer, setTimer] = useState(5);
 
   useEffect(() => {
@@ -31,7 +34,9 @@ export default function DriverTracking() {
       doc(db, "ride_requests", requestId),
       (doc) => {
         if (doc.exists()) {
-          setRideRequest({ id: doc.id, ...doc.data() });
+          const data = { id: doc.id, ...doc.data() };
+          setRideRequest(data);
+          console.log("DriverTracking ride request:", JSON.stringify(data, null, 2));
         } else {
           Toast.show({
             type: "error",
@@ -149,6 +154,7 @@ export default function DriverTracking() {
     };
 
     const distance = calculateDistance(userLocation, riderLocation);
+    console.log("Pickup distance:", distance, "meters");
     if (distance <= 50) {
       setPickupModalVisible(true);
       setHasShownPickupModal(true);
@@ -157,18 +163,77 @@ export default function DriverTracking() {
   }, [userLocation, riderLocation, hasShownPickupModal, rideRequest?.status]);
 
   useEffect(() => {
-    if (!pickupModalVisible || timer <= 0) return;
+    if (
+      !userLocation ||
+      !destinationCoords ||
+      rideRequest?.status !== "picked_up" ||
+      hasShownDestinationModal ||
+      destinationModalVisible ||
+      !pickupConfirmedAt
+    ) {
+      return;
+    }
+
+    // Check if 30 seconds have passed since pickup confirmation
+    const timeSincePickup = (Date.now() - pickupConfirmedAt) / 1000;
+    if (timeSincePickup < 30) {
+      console.log(`Waiting for 30s post-pickup: ${timeSincePickup.toFixed(1)}s elapsed`);
+      return;
+    }
+
+    const calculateDistance = (loc1, loc2) => {
+      const toRad = (value) => (value * Math.PI) / 180;
+      const R = 6371e3;
+      const lat1 = loc1.latitude;
+      const lat2 = loc2.latitude;
+      const lon1 = loc1.longitude;
+      const lon2 = loc2.longitude;
+
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    try {
+      console.log("Checking destination distance:", {
+        userLocation,
+        destinationCoords,
+        status: rideRequest?.status,
+        timeSincePickup: timeSincePickup.toFixed(1),
+      });
+      const distance = calculateDistance(userLocation, destinationCoords);
+      console.log("Destination distance:", distance, "meters");
+      if (distance <= 50) {
+        console.log("Triggering Confirm Drop-off modal");
+        setDestinationModalVisible(true);
+        setHasShownDestinationModal(true);
+        setTimer(5);
+      }
+    } catch (error) {
+      console.error("Error calculating destination distance:", error);
+    }
+  }, [userLocation, destinationCoords, rideRequest?.status, hasShownDestinationModal, destinationModalVisible, pickupConfirmedAt]);
+
+  useEffect(() => {
+    if (!pickupModalVisible && !destinationModalVisible || timer <= 0) return;
 
     const interval = setInterval(() => {
       setTimer((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [pickupModalVisible, timer]);
+  }, [pickupModalVisible, destinationModalVisible, timer]);
 
   const parseCoordinates = async (coordString) => {
     console.log("Parsing coordinates:", coordString);
     try {
+      if (!coordString) {
+        throw new Error("Coordinate string is empty or undefined");
+      }
       const [lat, lon] = coordString.split(",").map(parseFloat);
       if (!isNaN(lat) && !isNaN(lon)) {
         const result = { latitude: lat, longitude: lon };
@@ -177,17 +242,18 @@ export default function DriverTracking() {
       }
       const coords = await geocodeAddress(coordString);
       if (coords) {
+        console.log("Geocoded coordinates:", coords);
         return coords;
       }
       throw new Error("Invalid coordinates or address");
     } catch (error) {
-      console.error("Coordinate parsing error:", error);
+      console.error("Coordinate parsing error:", error.message);
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: "Invalid address.",
+        text2: "Invalid address format.",
       });
-      return { latitude: 29.6516, longitude: -82.3248 };
+      return { latitude: 29.6516, longitude: -82.3248 }; // Fallback coordinates
     }
   };
 
@@ -198,8 +264,12 @@ export default function DriverTracking() {
     }
 
     const loadRoute = async () => {
-      const points = await fetchDirections(riderLocation, destinationCoords, "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo");
-      setRouteCoordinates(points);
+      try {
+        const points = await fetchDirections(riderLocation, destinationCoords, "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo");
+        setRouteCoordinates(points);
+      } catch (error) {
+        console.error("Error loading route:", error);
+      }
     };
 
     loadRoute();
@@ -229,6 +299,7 @@ export default function DriverTracking() {
               await updateDoc(doc(db, "ride_requests", rideRequest.id), {
                 status: "pending",
                 driver_id: null,
+                driver_email: null,
                 driver: null,
                 driver_location: null,
               });
@@ -255,9 +326,11 @@ export default function DriverTracking() {
   const confirmPickup = async () => {
     if (!rideRequest) return;
     try {
+      console.log("Confirming pickup for ride:", rideRequest.id);
       await updateDoc(doc(db, "ride_requests", rideRequest.id), {
         status: "picked_up",
       });
+      setPickupConfirmedAt(Date.now());
       Toast.show({
         type: "success",
         text1: "Pickup Confirmed",
@@ -270,6 +343,29 @@ export default function DriverTracking() {
         type: "error",
         text1: "Error",
         text2: "Failed to confirm pickup.",
+      });
+    }
+  };
+
+  const confirmDropOff = async () => {
+    if (!rideRequest) return;
+    try {
+      console.log("Confirming drop-off for ride:", rideRequest.id);
+      await updateDoc(doc(db, "ride_requests", rideRequest.id), {
+        status: "drop_off_confirmed",
+      });
+      Toast.show({
+        type: "success",
+        text1: "Drop-off Confirmed",
+        text2: "You have confirmed dropping off the rider.",
+      });
+      setDestinationModalVisible(false);
+    } catch (error) {
+      console.error("Error confirming drop-off:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to confirm drop-off.",
       });
     }
   };
@@ -362,6 +458,30 @@ export default function DriverTracking() {
             >
               <Text style={styles.confirmButtonText}>
                 Yes {timer > 0 ? `(${timer}s)` : ""}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={destinationModalVisible}
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirm Drop-off</Text>
+            <Text style={styles.modalText}>
+              Have you dropped off {rideRequest?.riderName || "the rider"} at {rideRequest?.destination || "the destination"}?
+            </Text>
+            <TouchableOpacity
+              style={[styles.confirmButton, timer > 0 && styles.disabledButton]}
+              onPress={confirmDropOff}
+              disabled={timer > 0}
+            >
+              <Text style={styles.confirmButtonText}>
+                Confirm Drop-off {timer > 0 ? `(${timer}s)` : ""}
               </Text>
             </TouchableOpacity>
           </View>

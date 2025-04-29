@@ -2,8 +2,9 @@ import React, { useState, useEffect, useContext, useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, Modal } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
+import { Rating } from "react-native-elements";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { doc, onSnapshot, deleteDoc } from "firebase/firestore";
+import { doc, onSnapshot, deleteDoc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import * as Location from "expo-location";
 import Toast from "react-native-toast-message";
@@ -22,6 +23,9 @@ export default function RiderTracking() {
   const [routeCoordinates, setRouteCoordinates] = useState(null);
   const [arrivalModalVisible, setArrivalModalVisible] = useState(false);
   const [hasShownArrivalModal, setHasShownArrivalModal] = useState(false);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [hasShownRatingModal, setHasShownRatingModal] = useState(false);
+  const [rating, setRating] = useState(0);
   const [imageError, setImageError] = useState(false);
   const [timer, setTimer] = useState(5);
 
@@ -34,6 +38,7 @@ export default function RiderTracking() {
         if (doc.exists()) {
           const data = { id: doc.id, ...doc.data() };
           setRideRequest(data);
+          console.log("Ride request data:", JSON.stringify(data, null, 2));
           console.log("Driver car image URL:", data?.driver?.car_details?.image_url);
         } else {
           Toast.show({
@@ -160,14 +165,24 @@ export default function RiderTracking() {
   }, [rideRequest?.driver_location, riderLocation, hasShownArrivalModal, rideRequest?.status]);
 
   useEffect(() => {
-    if (!arrivalModalVisible || timer <= 0) return;
+    if (rideRequest?.status !== "drop_off_confirmed" || hasShownRatingModal) {
+      return;
+    }
+
+    setRatingModalVisible(true);
+    setHasShownRatingModal(true);
+    setTimer(5);
+  }, [rideRequest?.status, hasShownRatingModal]);
+
+  useEffect(() => {
+    if (!arrivalModalVisible && !ratingModalVisible || timer <= 0) return;
 
     const interval = setInterval(() => {
       setTimer((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [arrivalModalVisible, timer]);
+  }, [arrivalModalVisible, ratingModalVisible, timer]);
 
   const parseCoordinates = async (coordString) => {
     console.log("Parsing coordinates:", coordString);
@@ -257,6 +272,103 @@ export default function RiderTracking() {
       text1: "Error",
       text2: "Failed to load car image.",
     });
+  };
+
+  const submitRating = async () => {
+    if (!rideRequest || !rating) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Please select a rating.",
+      });
+      return;
+    }
+
+    if (!rideRequest.driver_email) {
+      console.error("Missing driver_email in rideRequest:", JSON.stringify(rideRequest, null, 2));
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Driver information is missing.",
+      });
+      return;
+    }
+
+    try {
+      // Calculate ride_time in minutes
+      const createdAt = rideRequest.createdAt ? new Date(rideRequest.createdAt) : new Date();
+      const now = new Date();
+      const ride_time = Math.round((now - createdAt) / (1000 * 60));
+
+      // Update driver's rating
+      const driverDocRef = doc(db, "users", rideRequest.driver_email);
+      const driverDoc = await getDoc(driverDocRef);
+      let newRating = rating;
+      let ratingCount = 1;
+      if (driverDoc.exists()) {
+        const currentRating = parseFloat(driverDoc.data().rating || "0");
+        const currentCount = driverDoc.data().ratingCount || 0;
+        ratingCount = currentCount + 1;
+        newRating = ((currentRating * currentCount + rating) / ratingCount).toFixed(2);
+        await updateDoc(driverDocRef, {
+          rating: newRating,
+          ratingCount,
+        });
+      } else {
+        await setDoc(driverDocRef, {
+          rating: newRating.toString(),
+          ratingCount,
+          email: rideRequest.driver_email,
+          uid: rideRequest.driver_id || "N/A",
+        });
+      }
+
+      // Prepare ride data
+      const rideData = {
+        driver: {
+          car_gas: rideRequest.driver?.car_details?.fuel_type || "regular",
+          car_image_url: rideRequest.driver?.car_details?.image_url || "",
+          car_seats: rideRequest.driver?.car_details?.seating_capacity || 5,
+          driver_id: rideRequest.driver_id || "N/A",
+          first_name: rideRequest.driver?.first_name || "N/A",
+          last_name: rideRequest.driver?.last_name || "",
+          mpg: rideRequest.driver?.car_details?.mpg || 27,
+          rating: newRating.toString(),
+        },
+        origin: rideRequest.origin || "Unknown",
+        destination: rideRequest.destination || "Unknown",
+        ride_time,
+        uid: rideRequest.driver_id || "N/A",
+        rider_email: rideRequest.rider_email || "N/A",
+        rider_name: rideRequest.riderName || "N/A",
+        status: "completed",
+        ...rideRequest,
+      };
+
+      // Save ride to rider's rides
+      await setDoc(doc(db, "users", userDetail.email, "rides", rideRequest.id), rideData);
+
+      // Save ride to driver's completed_rides
+      await setDoc(doc(db, "users", rideRequest.driver_email, "completed_rides", rideRequest.id), rideData);
+
+      // Delete ride request
+      await deleteDoc(doc(db, "ride_requests", rideRequest.id));
+
+      Toast.show({
+        type: "success",
+        text1: "Ride Completed",
+        text2: "Thank you for rating your driver!",
+      });
+      setRatingModalVisible(false);
+      router.replace("/home");
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to submit rating.",
+      });
+    }
   };
 
   if (!rideRequest || !userLocation || !riderLocation || !region) {
@@ -363,6 +475,39 @@ export default function RiderTracking() {
             >
               <Text style={styles.closeButtonText}>
                 OK {timer > 0 ? `(${timer}s)` : ""}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={ratingModalVisible}
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Rate Your Driver</Text>
+            <Text style={styles.modalText}>
+              How was your ride with {rideRequest?.driver?.first_name || "N/A"}?
+            </Text>
+            <Rating
+              showRating
+              type="star"
+              fractions={0}
+              startingValue={0}
+              imageSize={30}
+              onFinishRating={(value) => setRating(value)}
+              style={styles.rating}
+            />
+            <TouchableOpacity
+              style={[styles.submitButton, timer > 0 && styles.disabledButton]}
+              onPress={submitRating}
+              disabled={timer > 0}
+            >
+              <Text style={styles.submitButtonText}>
+                Submit {timer > 0 ? `(${timer}s)` : ""}
               </Text>
             </TouchableOpacity>
           </View>
@@ -488,8 +633,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textTransform: "uppercase",
   },
+  submitButton: {
+    backgroundColor: "#f3400d",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: "center",
+  },
+  submitButtonText: {
+    color: "#fff",
+    fontFamily: "oswald-bold",
+    fontSize: 16,
+    textTransform: "uppercase",
+  },
   disabledButton: {
     backgroundColor: "#888",
     opacity: 0.6,
+  },
+  rating: {
+    marginBottom: 20,
   },
 });

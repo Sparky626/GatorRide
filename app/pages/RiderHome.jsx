@@ -19,9 +19,9 @@ export default function RiderHome() {
   const [destination, setDestination] = useState("");
   const [selectedRideId, setSelectedRideId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false); // Prevent multiple clicks
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
-  const [modalRequestId, setModalRequestId] = useState(null); // Track request tied to modal
+  const [modalRequestId, setModalRequestId] = useState(null);
 
   useEffect(() => {
     const getCurrentLocation = async () => {
@@ -62,12 +62,14 @@ export default function RiderHome() {
   }, []);
 
   useEffect(() => {
-    // Fetch completed rides from users/{email}/rides
+    if (!userDetail?.uid || !userDetail?.email) {
+      console.log("Missing userDetail.uid or userDetail.email");
+      return;
+    }
+
     const fetchRides = async () => {
       try {
-        const user = userDetail?.email;
-        if (!user) return;
-        const ridesRef = collection(db, "users", user, "rides");
+        const ridesRef = collection(db, "users", userDetail.email, "rides");
         const querySnapshot = await getDocs(ridesRef);
         const ridesData = [];
         querySnapshot.forEach((doc) => {
@@ -82,24 +84,21 @@ export default function RiderHome() {
       }
     };
 
-    // Fetch pending/accepted ride requests from ride_requests
     const fetchRideRequests = () => {
-      if (!userDetail?.uid) return;
       const requestsRef = collection(db, "ride_requests");
       const unsubscribe = onSnapshot(requestsRef, (querySnapshot) => {
         const requestsData = [];
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          if (data.user_id === userDetail.uid && (data.status === "pending" || data.status === "accepted")) {
+          if (data.user_id === userDetail.uid && (data.status === "pending" || data.status === "accepted" || data.status === "picked_up" || data.status === "dropped_off")) {
             requestsData.push({
               id: doc.id,
               ...data,
             });
           }
         });
-        console.log("Ride requests updated:", requestsData);
+        console.log("Ride requests updated:", JSON.stringify(requestsData, null, 2));
         setRideRequests(requestsData);
-        // Only show modal for the first pending request and if it's a new request
         if (requestsData.length > 0 && requestsData[0].status === "pending" && requestsData[0].id !== modalRequestId) {
           setSearchModalVisible(true);
           setModalRequestId(requestsData[0].id);
@@ -107,7 +106,11 @@ export default function RiderHome() {
           setSearchModalVisible(false);
           setModalRequestId(null);
         }
-        if (requestsData.length > 0 && requestsData[0].status === "accepted") {
+        if (
+          requestsData.length > 0 &&
+          (requestsData[0].status === "accepted" || requestsData[0].status === "picked_up" || requestsData[0].status === "dropped_off") &&
+          requestsData[0].driver_email
+        ) {
           setSearchModalVisible(false);
           setModalRequestId(null);
           router.push(`pages/RiderTracking?requestId=${requestsData[0].id}`);
@@ -127,10 +130,10 @@ export default function RiderHome() {
     fetchRides();
     const unsubscribe = fetchRideRequests();
     return () => unsubscribe && unsubscribe();
-  }, [userDetail, router]);
+  }, [userDetail?.uid, userDetail?.email, router]);
 
   const submitRideRequest = async () => {
-    if (!origin || !userDetail?.email) {
+    if (!origin || !userDetail?.email || !userDetail?.uid) {
       Alert.alert("Error", "Please select a location and ensure you are logged in.");
       return;
     }
@@ -143,9 +146,8 @@ export default function RiderHome() {
     setIsSubmitting(true);
     setLoading(true);
     try {
-      // Re-check for active requests to avoid race conditions
       const hasActiveRequest = rideRequests.some(
-        (req) => req.status === "pending" || req.status === "accepted"
+        (req) => req.status === "pending" || req.status === "accepted" || req.status === "picked_up" || req.status === "dropped_off"
       );
       if (hasActiveRequest) {
         Alert.alert(
@@ -162,7 +164,7 @@ export default function RiderHome() {
       const { latitude, longitude } = location.coords;
 
       const rideRequest = {
-        riderName: userDetail.name,
+        riderName: userDetail.name || "Rider",
         origin,
         destination,
         status: "pending",
@@ -236,7 +238,7 @@ export default function RiderHome() {
   );
 
   const hasActiveRequest = rideRequests.some(
-    (req) => req.status === "pending" || req.status === "accepted"
+    (req) => req.status === "pending" || req.status === "accepted" || req.status === "picked_up" || req.status === "dropped_off"
   );
 
   return (
