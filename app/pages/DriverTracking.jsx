@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo } from "react";
+import React, { useState, useEffect, useContext, useMemo, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Modal } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
@@ -26,6 +26,8 @@ export default function DriverTracking() {
   const [hasShownDestinationModal, setHasShownDestinationModal] = useState(false);
   const [pickupConfirmedAt, setPickupConfirmedAt] = useState(null);
   const [timer, setTimer] = useState(5);
+  const [hasFitToRoute, setHasFitToRoute] = useState(false);
+  const mapRef = useRef(null);
 
   useEffect(() => {
     if (!requestId || !userDetail?.uid) return;
@@ -174,10 +176,10 @@ export default function DriverTracking() {
       return;
     }
 
-    // Check if 30 seconds have passed since pickup confirmation
+    // Check if 10 seconds have passed since pickup confirmation
     const timeSincePickup = (Date.now() - pickupConfirmedAt) / 1000;
-    if (timeSincePickup < 30) {
-      console.log(`Waiting for 30s post-pickup: ${timeSincePickup.toFixed(1)}s elapsed`);
+    if (timeSincePickup < 10) {
+      console.log(`Waiting for 10s post-pickup: ${timeSincePickup.toFixed(1)}s elapsed`);
       return;
     }
 
@@ -258,30 +260,69 @@ export default function DriverTracking() {
   };
 
   useEffect(() => {
-    if (!riderLocation || !destinationCoords) {
+    if (!userLocation || !riderLocation || !rideRequest) {
       setRouteCoordinates(null);
       return;
     }
 
     const loadRoute = async () => {
       try {
-        const points = await fetchDirections(riderLocation, destinationCoords, "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo");
+        let origin, destination;
+        if (rideRequest.status !== "picked_up") {
+          // Route from driver (userLocation) to rider (riderLocation)
+          origin = userLocation;
+          destination = riderLocation;
+        } else {
+          // Route from rider (riderLocation) to destination (destinationCoords)
+          origin = riderLocation;
+          destination = destinationCoords;
+        }
+
+        if (!origin || !destination) {
+          setRouteCoordinates(null);
+          return;
+        }
+
+        const points = await fetchDirections(origin, destination, "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo");
         setRouteCoordinates(points);
       } catch (error) {
         console.error("Error loading route:", error);
+        Toast.show({
+          type: "error",
+          text1: "Route Error",
+          text2: "Failed to load route.",
+        });
       }
     };
 
     loadRoute();
-  }, [riderLocation, destinationCoords]);
+  }, [userLocation, riderLocation, destinationCoords, rideRequest?.status]);
+
+  useEffect(() => {
+    if (!mapRef.current || !userLocation || !riderLocation || hasFitToRoute) return;
+
+    const coordinates = rideRequest?.status !== "picked_up"
+      ? [userLocation, riderLocation]
+      : [userLocation, destinationCoords || riderLocation];
+
+    const validCoords = coordinates.filter(coord => coord && coord.latitude && coord.longitude);
+
+    if (validCoords.length >= 1) {
+      mapRef.current.fitToCoordinates(validCoords, {
+        edgePadding: { top: 50, right: 50, bottom: 150, left: 50 }, // Extra bottom padding for infoContainer
+        animated: true,
+      });
+      setHasFitToRoute(true);
+    }
+  }, [userLocation, riderLocation, destinationCoords, rideRequest?.status, hasFitToRoute]);
 
   const region = useMemo(() => {
     if (!userLocation) return null;
     return {
       latitude: userLocation.latitude,
       longitude: userLocation.longitude,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
+      latitudeDelta: 0.005, // Fixed zoom to follow driver
+      longitudeDelta: 0.005, // Fixed zoom to follow driver
     };
   }, [userLocation?.latitude, userLocation?.longitude]);
 
@@ -382,6 +423,7 @@ export default function DriverTracking() {
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         region={region}
         provider={PROVIDER_DEFAULT}
@@ -395,7 +437,7 @@ export default function DriverTracking() {
             pinColor="red"
           />
         )}
-        {destinationCoords && (
+        {rideRequest.status === "picked_up" && destinationCoords && (
           <Marker
             coordinate={destinationCoords}
             title="Destination"
@@ -403,10 +445,10 @@ export default function DriverTracking() {
             pinColor="green"
           />
         )}
-        {destinationCoords && (
+        {routeCoordinates && (
           <MapViewDirections
-            origin={riderLocation}
-            destination={destinationCoords}
+            origin={rideRequest.status !== "picked_up" ? userLocation : riderLocation}
+            destination={rideRequest.status !== "picked_up" ? riderLocation : destinationCoords}
             apikey="AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo"
             strokeWidth={3}
             strokeColor="blue"

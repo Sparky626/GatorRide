@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
+import { Platform } from "react-native";
+import { UserDetailContext } from "@/context/UserDetailContext"; 
 import { Text, View, StyleSheet, TouchableOpacity, Image, Modal, ScrollView } from "react-native";
 
 const RideCard = ({ rideData, onSelect, isSelected }) => {
@@ -13,6 +15,7 @@ const RideCard = ({ rideData, onSelect, isSelected }) => {
     status,
     uid,
   } = rideData;
+  const { userDetail } = useContext(UserDetailContext);
   const distance = ((ride_time / 60) * 55).toFixed(1);
   const gaspermile = (driver.car_gas === 'premium') ? 3.87/driver.mpg : 3.16/driver.mpg;
   const totalprice = distance * gaspermile;
@@ -43,12 +46,12 @@ const RideCard = ({ rideData, onSelect, isSelected }) => {
       >
         <View style={styles.rideInfo}>
           <Image
-            resizeMode="contain"
+            resizeMode = "stretch"
             source={{ uri: driver.car_details?.image_url || "https://via.placeholder.com/70" }}
             style={styles.rideIcon}
           />
           <View>
-            <Text style={styles.rideType}>{driver.first_name || "N/A"} {driver.last_name || ""}</Text>
+          {!userDetail.driver ? <Text style={styles.rideType}>{driver.first_name || "N/A"} {driver.last_name || ""}</Text> : <Text style={styles.rideType}>{rider_name || "N/A"}</Text>}
             <Text style={styles.destination}>to {truncateText(destination, 25)}</Text>
             <Text style={styles.originText}>from {truncateText(origin, 25)}</Text>
             <Text style={styles.rating}>★{parseFloat(driver.rating || 0).toFixed(1)}</Text>
@@ -74,15 +77,15 @@ const RideCard = ({ rideData, onSelect, isSelected }) => {
           <ScrollView contentContainerStyle={styles.modalContent}>
             <Text style={styles.modalTitle}>Ride Details</Text>
             <Image
-              resizeMode="contain"
+              resizeMode="stretch"
               source={{ uri: driver.car_details?.image_url || "https://via.placeholder.com/150" }}
               style={styles.modalImage}
             />
-            <Text style={styles.modalText}>Driver: {driver.first_name || "N/A"} {driver.last_name || ""}</Text>
-            <Text style={styles.modalText}>Driver Rating: ★{parseFloat(driver.rating || 0).toFixed(1)}</Text>
+            {!userDetail.driver ? <Text style={styles.modalText}>Driver: {driver.first_name || "N/A"} {driver.last_name || ""}</Text> : <Text style={styles.modalText}>Rider: {rider_name || "N/A"}</Text>}
+            <Text style={styles.modalText}>Rating: ★{parseFloat(driver.rating || 0).toFixed(1)}</Text>
             <Text style={styles.modalText}>From: {origin}</Text>
             <Text style={styles.modalText}>To: {destination}</Text>
-            <Text style={styles.modalText}>Ride Date: {rideDate}</Text>
+            <Text style={styles.modalText}>Date: {rideDate}</Text>
             <Text style={styles.modalText}>Ride Time: {eta} {time}</Text>
             <Text style={styles.modalText}>Distance: {distance} miles</Text>
             <TouchableOpacity
@@ -107,7 +110,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 8,
     marginVertical: 5,
-    width: 360,
+    width: '100%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -127,8 +130,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rideIcon: {
-    width: 70,
-    height: 70,
+    width: 90,
+    height: 65,
     marginRight: 12.5,
   },
   rideType: {
@@ -211,7 +214,7 @@ const styles = StyleSheet.create({
   modalImage: {
     alignItems: 'center',
     width: 250,
-    height: 150,
+    height: 165,
     marginBottom: 15,
     borderRadius: 10,
   },

@@ -26,7 +26,12 @@ export default function TravelHistory() {
           });
           return;
         }
-        const ridesRef = collection(db, "users", user, "rides");
+        if (userDetail.driver){
+          var ridesRef = collection(db, "users", user, "completed_rides");
+        }
+        else{
+          var ridesRef = collection(db, "users", user, "rides");
+        }
         const querySnapshot = await getDocs(ridesRef);
         const ridesData = querySnapshot.docs.map((doc) => ({
           id: doc.id,

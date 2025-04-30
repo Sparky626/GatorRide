@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo } from "react";
+import React, { useState, useEffect, useContext, useMemo, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, Modal } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
@@ -28,6 +28,7 @@ export default function RiderTracking() {
   const [rating, setRating] = useState(0);
   const [imageError, setImageError] = useState(false);
   const [timer, setTimer] = useState(5);
+  const mapRef = useRef(null);
 
   useEffect(() => {
     if (!requestId || !userDetail?.uid) return;
@@ -223,13 +224,33 @@ export default function RiderTracking() {
     loadRoute();
   }, [riderLocation, destinationCoords]);
 
+  // Optional: Dynamic zoom to fit all markers
+  /*
+  useEffect(() => {
+    if (!mapRef.current || !userLocation || !riderLocation || !destinationCoords) return;
+
+    const coordinates = [
+      userLocation,
+      riderLocation,
+      destinationCoords,
+    ].filter(coord => coord);
+
+    if (coordinates.length > 1) {
+      mapRef.current.fitToCoordinates(coordinates, {
+        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+        animated: true,
+      });
+    }
+  }, [userLocation, riderLocation, destinationCoords]);
+  */
+
   const region = useMemo(() => {
     if (!userLocation) return null;
     return {
       latitude: userLocation.latitude,
       longitude: userLocation.longitude,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
+      latitudeDelta: 0.005, // Closer zoom
+      longitudeDelta: 0.005, // Closer zoom
     };
   }, [userLocation?.latitude, userLocation?.longitude]);
 
@@ -383,6 +404,7 @@ export default function RiderTracking() {
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         region={region}
         provider={PROVIDER_DEFAULT}
@@ -497,6 +519,7 @@ export default function RiderTracking() {
               type="star"
               fractions={0}
               startingValue={0}
+              ratingBackgroundColor='transparent'
               imageSize={30}
               onFinishRating={(value) => setRating(value)}
               style={styles.rating}
