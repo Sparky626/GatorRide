@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Modal, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { View, TouchableOpacity, Modal, Text, StyleSheet, SafeAreaView, Platform } from 'react-native';
 import { useRouter, Slot } from 'expo-router';
 import Entypo from '@expo/vector-icons/Entypo';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -73,7 +73,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b1e7d',
   },
   hamburger: {
-    padding: 10,
+    paddingTop: Platform.OS === "ios" ? 0 : 50,
+    paddingRight: 20,
   },
   modalOverlay: {
     flex: 1,

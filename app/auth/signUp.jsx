@@ -2,9 +2,9 @@ import { View, Text, Image, TextInput, TouchableOpacity, Pressable } from "react
 import { StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import React, { useState, useContext } from "react";
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "@firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
-import { signOut } from "firebase/auth";
+import { signOut } from "@firebase/auth";
 import { auth, db } from "@/config/firebaseConfig";
 import { UserDetailContext } from "@/context/UserDetailContext";
 import Toast from 'react-native-toast-message';

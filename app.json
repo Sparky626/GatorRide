@@ -28,7 +28,9 @@
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#39347c"
       },
-      "permissions": ["android.permission.ACCESS_FINE_LOCATION"],
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo"
@@ -51,7 +53,8 @@
           "backgroundColor": "#39347c"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

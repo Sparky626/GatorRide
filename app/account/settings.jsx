@@ -2,7 +2,7 @@ import { Text, View, StyleSheet, TouchableOpacity, Switch } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useContext } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { signOut } from "firebase/auth";
+import { signOut } from "@firebase/auth";
 import { auth, db } from "../../config/firebaseConfig";
 import { doc, updateDoc } from "firebase/firestore";
 

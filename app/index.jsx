@@ -7,19 +7,11 @@ import { doc, getDoc } from "firebase/firestore";
 import { useContext, useEffect, useState } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
 import 'react-native-get-random-values';
-import { useFonts, Oswald_300Light, Oswald_400Regular, Oswald_500Medium, Oswald_700Bold } from '@expo-google-fonts/oswald';
 
 export default function Index() {
   const router = useRouter();
   const { setUserDetail } = useContext(UserDetailContext);
   const [loading, setLoading] = useState(true);
-
-  const [fontsLoaded] = useFonts({
-    'oswald-light': Oswald_300Light,
-    'oswald-regular': Oswald_400Regular,
-    'oswald-medium': Oswald_500Medium,
-    'oswald-bold': Oswald_700Bold,
-  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -39,7 +31,7 @@ export default function Index() {
     return () => unsubscribe();
   }, [router, setUserDetail]);
 
-  if (!fontsLoaded || loading) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#f3400d" />
@@ -108,7 +100,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     color: '#eb7f05',
     textAlign: 'center',
-    fontFamily: 'oswald-regular',
+    fontFamily: 'oswald-medium',
     marginBottom: 40,
     paddingHorizontal: 20,
   },
