@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useContext, useMemo, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Modal } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Modal,
+} from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { UserDetailContext } from "@/context/UserDetailContext";
@@ -9,7 +17,11 @@ import * as Location from "expo-location";
 import Toast from "react-native-toast-message";
 import toastConfig from "../../config/toastConfig";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { updateFirestoreLocation, geocodeAddress, fetchDirections } from "../../utils/mapUtils";
+import {
+  updateFirestoreLocation,
+  geocodeAddress,
+  fetchDirections,
+} from "../../utils/mapUtils";
 
 export default function DriverTracking() {
   const { userDetail } = useContext(UserDetailContext);
@@ -23,7 +35,8 @@ export default function DriverTracking() {
   const [pickupModalVisible, setPickupModalVisible] = useState(false);
   const [hasShownPickupModal, setHasShownPickupModal] = useState(false);
   const [destinationModalVisible, setDestinationModalVisible] = useState(false);
-  const [hasShownDestinationModal, setHasShownDestinationModal] = useState(false);
+  const [hasShownDestinationModal, setHasShownDestinationModal] =
+    useState(false);
   const [pickupConfirmedAt, setPickupConfirmedAt] = useState(null);
   const [timer, setTimer] = useState(5);
   const [hasFitToRoute, setHasFitToRoute] = useState(false);
@@ -38,7 +51,10 @@ export default function DriverTracking() {
         if (doc.exists()) {
           const data = { id: doc.id, ...doc.data() };
           setRideRequest(data);
-          console.log("DriverTracking ride request:", JSON.stringify(data, null, 2));
+          console.log(
+            "DriverTracking ride request:",
+            JSON.stringify(data, null, 2)
+          );
         } else {
           Toast.show({
             type: "error",
@@ -68,11 +84,19 @@ export default function DriverTracking() {
         }
 
         locationSubscription = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 5000,
+            distanceInterval: 10,
+          },
           (location) => {
             const { latitude, longitude } = location.coords;
             setUserLocation({ latitude, longitude });
-            updateFirestoreLocation({ latitude, longitude }, "driver_location", requestId);
+            updateFirestoreLocation(
+              { latitude, longitude },
+              "driver_location",
+              requestId
+            );
           }
         );
       } catch (error) {
@@ -150,7 +174,10 @@ export default function DriverTracking() {
       const dLon = toRad(lon2 - lon1);
       const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        Math.cos(toRad(lat1)) *
+          Math.cos(toRad(lat2)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
@@ -179,7 +206,9 @@ export default function DriverTracking() {
     // Check if 10 seconds have passed since pickup confirmation
     const timeSincePickup = (Date.now() - pickupConfirmedAt) / 1000;
     if (timeSincePickup < 10) {
-      console.log(`Waiting for 10s post-pickup: ${timeSincePickup.toFixed(1)}s elapsed`);
+      console.log(
+        `Waiting for 10s post-pickup: ${timeSincePickup.toFixed(1)}s elapsed`
+      );
       return;
     }
 
@@ -195,7 +224,10 @@ export default function DriverTracking() {
       const dLon = toRad(lon2 - lon1);
       const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        Math.cos(toRad(lat1)) *
+          Math.cos(toRad(lat2)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
@@ -218,10 +250,17 @@ export default function DriverTracking() {
     } catch (error) {
       console.error("Error calculating destination distance:", error);
     }
-  }, [userLocation, destinationCoords, rideRequest?.status, hasShownDestinationModal, destinationModalVisible, pickupConfirmedAt]);
+  }, [
+    userLocation,
+    destinationCoords,
+    rideRequest?.status,
+    hasShownDestinationModal,
+    destinationModalVisible,
+    pickupConfirmedAt,
+  ]);
 
   useEffect(() => {
-    if (!pickupModalVisible && !destinationModalVisible || timer <= 0) return;
+    if ((!pickupModalVisible && !destinationModalVisible) || timer <= 0) return;
 
     const interval = setInterval(() => {
       setTimer((prev) => prev - 1);
@@ -283,7 +322,11 @@ export default function DriverTracking() {
           return;
         }
 
-        const points = await fetchDirections(origin, destination, "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo");
+        const points = await fetchDirections(
+          origin,
+          destination,
+          "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo"
+        );
         setRouteCoordinates(points);
       } catch (error) {
         console.error("Error loading route:", error);
@@ -299,13 +342,17 @@ export default function DriverTracking() {
   }, [userLocation, riderLocation, destinationCoords, rideRequest?.status]);
 
   useEffect(() => {
-    if (!mapRef.current || !userLocation || !riderLocation || hasFitToRoute) return;
+    if (!mapRef.current || !userLocation || !riderLocation || hasFitToRoute)
+      return;
 
-    const coordinates = rideRequest?.status !== "picked_up"
-      ? [userLocation, riderLocation]
-      : [userLocation, destinationCoords || riderLocation];
+    const coordinates =
+      rideRequest?.status !== "picked_up"
+        ? [userLocation, riderLocation]
+        : [userLocation, destinationCoords || riderLocation];
 
-    const validCoords = coordinates.filter(coord => coord && coord.latitude && coord.longitude);
+    const validCoords = coordinates.filter(
+      (coord) => coord && coord.latitude && coord.longitude
+    );
 
     if (validCoords.length >= 1) {
       mapRef.current.fitToCoordinates(validCoords, {
@@ -314,7 +361,13 @@ export default function DriverTracking() {
       });
       setHasFitToRoute(true);
     }
-  }, [userLocation, riderLocation, destinationCoords, rideRequest?.status, hasFitToRoute]);
+  }, [
+    userLocation,
+    riderLocation,
+    destinationCoords,
+    rideRequest?.status,
+    hasFitToRoute,
+  ]);
 
   const region = useMemo(() => {
     if (!userLocation) return null;
@@ -447,18 +500,30 @@ export default function DriverTracking() {
         )}
         {routeCoordinates && (
           <MapViewDirections
-            origin={rideRequest.status !== "picked_up" ? userLocation : riderLocation}
-            destination={rideRequest.status !== "picked_up" ? riderLocation : destinationCoords}
+            origin={
+              rideRequest.status !== "picked_up" ? userLocation : riderLocation
+            }
+            destination={
+              rideRequest.status !== "picked_up"
+                ? riderLocation
+                : destinationCoords
+            }
             apikey="AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo"
             strokeWidth={3}
             strokeColor="blue"
             region="US"
             precision="high"
             onReady={(result) => {
-              console.log("Directions result:", JSON.stringify(result, null, 2));
+              console.log(
+                "Directions result:",
+                JSON.stringify(result, null, 2)
+              );
             }}
             onError={(error) => {
-              console.error("MapViewDirections error:", JSON.stringify(error, null, 2));
+              console.error(
+                "MapViewDirections error:",
+                JSON.stringify(error, null, 2)
+              );
               Toast.show({
                 type: "error",
                 text1: "Route Error",
@@ -480,7 +545,10 @@ export default function DriverTracking() {
         <Text style={styles.infoText}>From: {rideRequest.origin}</Text>
         <Text style={styles.infoText}>To: {rideRequest.destination}</Text>
       </View>
-      <TouchableOpacity style={[styles.cancelButton, styles.driverCancel]} onPress={cancelRide}>
+      <TouchableOpacity
+        style={[styles.cancelButton, styles.driverCancel]}
+        onPress={cancelRide}
+      >
         <Text style={styles.cancelButtonText}>Cancel Ride</Text>
       </TouchableOpacity>
       <Modal
@@ -492,7 +560,9 @@ export default function DriverTracking() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Have you picked up the rider?</Text>
-            <Text style={styles.modalText}>Rider: {rideRequest?.riderName || "N/A"}</Text>
+            <Text style={styles.modalText}>
+              Rider: {rideRequest?.riderName || "N/A"}
+            </Text>
             <TouchableOpacity
               style={[styles.confirmButton, timer > 0 && styles.disabledButton]}
               onPress={confirmPickup}
@@ -515,7 +585,8 @@ export default function DriverTracking() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Confirm Drop-off</Text>
             <Text style={styles.modalText}>
-              Have you dropped off {rideRequest?.riderName || "the rider"} at {rideRequest?.destination || "the destination"}?
+              Have you dropped off {rideRequest?.riderName || "the rider"} at{" "}
+              {rideRequest?.destination || "the destination"}?
             </Text>
             <TouchableOpacity
               style={[styles.confirmButton, timer > 0 && styles.disabledButton]}

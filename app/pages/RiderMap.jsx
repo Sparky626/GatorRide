@@ -1,5 +1,5 @@
-import { Text, View, StyleSheet } from 'react-native';
-import MapView from 'react-native-maps';
+import { Text, View, StyleSheet } from "react-native";
+import MapView from "react-native-maps";
 
 const INITIAL_REGION = {
   latitude: 29.647011,
@@ -24,13 +24,13 @@ export default function RiderMap() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b1e7d',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#0b1e7d",
+    justifyContent: "center",
+    alignItems: "center",
   },
   map: {
-    width: '100%',
-    height: '100%',
-    color: '#eb7f05',
+    width: "100%",
+    height: "100%",
+    color: "#eb7f05",
   },
 });

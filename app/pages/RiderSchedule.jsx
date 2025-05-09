@@ -1,7 +1,23 @@
-import { Text, View, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Modal } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  Modal,
+} from "react-native";
 import { useState, useContext, useEffect, useCallback } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { collection, doc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  query,
+  where,
+  deleteDoc,
+} from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import GooglePlacesInput from "../components/GooglePlacesInput";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -88,7 +104,12 @@ export default function RiderSchedule() {
     const currentTime = selectedTime || date;
     setShowTimePicker(false);
     const updatedDate = new Date(date);
-    updatedDate.setHours(currentTime.getHours(), currentTime.getMinutes(), 0, 0);
+    updatedDate.setHours(
+      currentTime.getHours(),
+      currentTime.getMinutes(),
+      0,
+      0
+    );
     setDate(updatedDate);
   };
 
@@ -206,7 +227,9 @@ export default function RiderSchedule() {
 
     try {
       await deleteDoc(doc(db, "scheduled_rides", cancelRideId));
-      setScheduledRides(scheduledRides.filter((ride) => ride.id !== cancelRideId));
+      setScheduledRides(
+        scheduledRides.filter((ride) => ride.id !== cancelRideId)
+      );
       setCancelModalVisible(false);
       setCancelRideId(null);
       Toast.show({
@@ -238,7 +261,10 @@ export default function RiderSchedule() {
         </Text>
       )}
       <Text style={styles.rideText}>
-        Driver: {item.driver_id === "TBD" ? "Pending" : item.driver.first_name + " " + item.driver.last_name}
+        Driver:{" "}
+        {item.driver_id === "TBD"
+          ? "Pending"
+          : item.driver.first_name + " " + item.driver.last_name}
       </Text>
       <TouchableOpacity
         style={styles.cancelButton}
@@ -255,15 +281,21 @@ export default function RiderSchedule() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>
-        {viewMode === "schedule" ? "Schedule Your Ride" : "Your Scheduled Rides"}
+        {viewMode === "schedule"
+          ? "Schedule Your Ride"
+          : "Your Scheduled Rides"}
       </Text>
 
       <TouchableOpacity
         style={styles.toggleButton}
-        onPress={() => setViewMode(viewMode === "schedule" ? "view" : "schedule")}
+        onPress={() =>
+          setViewMode(viewMode === "schedule" ? "view" : "schedule")
+        }
       >
         <Text style={styles.toggleText}>
-          {viewMode === "schedule" ? "View Scheduled Rides" : "Schedule a New Ride"}
+          {viewMode === "schedule"
+            ? "View Scheduled Rides"
+            : "Schedule a New Ride"}
         </Text>
       </TouchableOpacity>
 
@@ -301,7 +333,10 @@ export default function RiderSchedule() {
                 onPress={() => setShowTimePicker(true)}
               >
                 <Text style={styles.dateText}>
-                  {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {date.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -591,55 +626,55 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContainer: {
-    width: '80%',
-    backgroundColor: '#1a2a9b',
+    width: "80%",
+    backgroundColor: "#1a2a9b",
     borderRadius: 10,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   modalTitle: {
-    color: '#eb7f05',
-    fontFamily: 'oswald-bold',
+    color: "#eb7f05",
+    fontFamily: "oswald-bold",
     fontSize: 22,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 15,
   },
   modalText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
+    color: "#fff",
+    fontFamily: "oswald-bold",
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 20,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   modalButton: {
     flex: 1,
     padding: 10,
     borderRadius: 5,
-    alignItems: 'center',
+    alignItems: "center",
     marginHorizontal: 5,
   },
   confirmButton: {
-    backgroundColor: '#f3400d',
+    backgroundColor: "#f3400d",
   },
   cancelModalButton: {
-    backgroundColor: '#888',
+    backgroundColor: "#888",
   },
   modalButtonText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
+    color: "#fff",
+    fontFamily: "oswald-bold",
     fontSize: 16,
   },
 });

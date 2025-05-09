@@ -1,7 +1,22 @@
-import { Text, View, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Modal } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  Modal,
+} from "react-native";
 import { useState, useContext, useEffect, useCallback } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { collection, doc, setDoc, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import Toast from "react-native-toast-message";
 import toastConfig from "../../config/toastConfig";
@@ -99,7 +114,9 @@ export default function DriverSchedule() {
         driver_id: userDetail.uid,
         first_name: userDetail.name?.split(" ")[0] || "Driver",
         last_name: userDetail.name?.split(" ").slice(1).join(" ") || "",
-        car_image_url: userDetail.car_details?.car_image_url || "https://example.com/placeholder.png",
+        car_image_url:
+          userDetail.car_details?.car_image_url ||
+          "https://example.com/placeholder.png",
         car_seats: userDetail.car_details?.seats || 5,
         car_gas: userDetail.car_details?.gas_type?.toLowerCase() || "regular",
         mpg: userDetail.car_details?.mpg || 25,
@@ -117,7 +134,10 @@ export default function DriverSchedule() {
       );
 
       setAvailableRides(availableRides.filter((r) => r.id !== rideId));
-      setAcceptedRides([...acceptedRides, { ...selectedRide, driver_id: userDetail.uid, driver }]);
+      setAcceptedRides([
+        ...acceptedRides,
+        { ...selectedRide, driver_id: userDetail.uid, driver },
+      ]);
       setModalVisible(false);
       setSelectedRide(null);
 
@@ -149,7 +169,9 @@ export default function DriverSchedule() {
 
     try {
       const rideRef = doc(db, "scheduled_rides", cancelRideId);
-      const cancelledRide = acceptedRides.find((ride) => ride.id === cancelRideId);
+      const cancelledRide = acceptedRides.find(
+        (ride) => ride.id === cancelRideId
+      );
       await setDoc(
         rideRef,
         {
@@ -176,25 +198,34 @@ export default function DriverSchedule() {
         { merge: true }
       );
 
-      setAcceptedRides(acceptedRides.filter((ride) => ride.id !== cancelRideId));
-      setAvailableRides([...availableRides, { ...cancelledRide, driver_id: "TBD", driver: {
-        driver_id: "TBD",
-        first_name: "Pending",
-        last_name: "Driver",
-        car_details: {
-          car_image_url: "https://example.com/placeholder.png",
-          seats: 5,
-          gas_type: "regular",
-          mpg: 25,
-          license_plate: "TBD",
-          capacity: 5,
-          color: "Unknown",
-          make: "Unknown",
-          model: "Unknown",
-          year: 0,
+      setAcceptedRides(
+        acceptedRides.filter((ride) => ride.id !== cancelRideId)
+      );
+      setAvailableRides([
+        ...availableRides,
+        {
+          ...cancelledRide,
+          driver_id: "TBD",
+          driver: {
+            driver_id: "TBD",
+            first_name: "Pending",
+            last_name: "Driver",
+            car_details: {
+              car_image_url: "https://example.com/placeholder.png",
+              seats: 5,
+              gas_type: "regular",
+              mpg: 25,
+              license_plate: "TBD",
+              capacity: 5,
+              color: "Unknown",
+              make: "Unknown",
+              model: "Unknown",
+              year: 0,
+            },
+            rating: "N/A",
+          },
         },
-        rating: "N/A",
-      }}]);
+      ]);
       setCancelModalVisible(false);
       setCancelRideId(null);
 
@@ -256,7 +287,9 @@ export default function DriverSchedule() {
       </Text>
       <TouchableOpacity
         style={styles.toggleButton}
-        onPress={() => setViewMode(viewMode === "available" ? "accepted" : "available")}
+        onPress={() =>
+          setViewMode(viewMode === "available" ? "accepted" : "available")
+        }
       >
         <Text style={styles.toggleText}>
           {viewMode === "available" ? "View My Rides" : "View Available Rides"}
@@ -276,7 +309,9 @@ export default function DriverSchedule() {
         }
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {viewMode === "available" ? "No available rides found." : "No accepted rides found."}
+            {viewMode === "available"
+              ? "No available rides found."
+              : "No accepted rides found."}
           </Text>
         }
       />
@@ -301,16 +336,18 @@ export default function DriverSchedule() {
                   To: {selectedRide.destination}
                 </Text>
                 <Text style={styles.modalText}>
-                  Date: {new Date(selectedRide.scheduled_datetime).toLocaleString()}
+                  Date:{" "}
+                  {new Date(selectedRide.scheduled_datetime).toLocaleString()}
                 </Text>
                 <Text style={styles.modalText}>
                   Repeat: {selectedRide.repeat}
                 </Text>
-                {selectedRide.repeat === "Weekly" && selectedRide.scheduled_days?.length > 0 && (
-                  <Text style={styles.modalText}>
-                    Days: {selectedRide.scheduled_days.join(", ")}
-                  </Text>
-                )}
+                {selectedRide.repeat === "Weekly" &&
+                  selectedRide.scheduled_days?.length > 0 && (
+                    <Text style={styles.modalText}>
+                      Days: {selectedRide.scheduled_days.join(", ")}
+                    </Text>
+                  )}
               </View>
             )}
             <View style={styles.modalButtons}>
@@ -415,61 +452,61 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContainer: {
-    width: '80%',
-    backgroundColor: '#1a2a9b',
+    width: "80%",
+    backgroundColor: "#1a2a9b",
     borderRadius: 10,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   modalTitle: {
-    color: '#eb7f05',
-    fontFamily: 'oswald-bold',
+    color: "#eb7f05",
+    fontFamily: "oswald-bold",
     fontSize: 22,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 15,
   },
   modalContent: {
     marginBottom: 20,
   },
   modalText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
+    color: "#fff",
+    fontFamily: "oswald-bold",
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 20,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   modalButton: {
     flex: 1,
     padding: 10,
     borderRadius: 5,
-    alignItems: 'center',
+    alignItems: "center",
     marginHorizontal: 5,
   },
   acceptButton: {
-    backgroundColor: '#f3400d',
+    backgroundColor: "#f3400d",
   },
   confirmButton: {
-    backgroundColor: '#f3400d',
+    backgroundColor: "#f3400d",
   },
   cancelModalButton: {
-    backgroundColor: '#888',
+    backgroundColor: "#888",
   },
   modalButtonText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
+    color: "#fff",
+    fontFamily: "oswald-bold",
     fontSize: 16,
   },
   emptyText: {

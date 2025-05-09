@@ -1,9 +1,9 @@
-import { Text, View, StyleSheet } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import { useState, useEffect, useContext } from 'react';
-import { UserDetailContext } from '@/context/UserDetailContext';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../../config/firebaseConfig';
+import { Text, View, StyleSheet } from "react-native";
+import MapView, { Marker } from "react-native-maps";
+import { useState, useEffect, useContext } from "react";
+import { UserDetailContext } from "@/context/UserDetailContext";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../config/firebaseConfig";
 
 const INITIAL_REGION = {
   latitude: 29.647011,
@@ -26,7 +26,9 @@ export default function DriverMap() {
             id: doc.id,
             ...doc.data(),
           }))
-          .filter((request) => request.origin?.latitude && request.origin?.longitude);
+          .filter(
+            (request) => request.origin?.latitude && request.origin?.longitude
+          );
         setRideRequests(requestsData);
       } catch (error) {
         console.error("Error fetching ride requests:", error);
@@ -62,13 +64,13 @@ export default function DriverMap() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b1e7d',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#0b1e7d",
+    justifyContent: "center",
+    alignItems: "center",
   },
   map: {
-    width: '100%',
-    height: '100%',
-    color: '#eb7f05',
+    width: "100%",
+    height: "100%",
+    color: "#eb7f05",
   },
 });

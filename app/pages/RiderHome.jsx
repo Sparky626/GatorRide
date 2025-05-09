@@ -1,7 +1,24 @@
-import { Text, View, StyleSheet, FlatList, Image, TouchableOpacity, Alert, Modal, ActivityIndicator } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  ActivityIndicator,
+} from "react-native";
 import React, { useState, useEffect, useContext } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { collection, getDocs, addDoc, deleteDoc, onSnapshot, doc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  onSnapshot,
+  doc,
+} from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import GooglePlacesInput from "../components/GooglePlacesInput";
 import RideCard from "../components/RideCard";
@@ -41,10 +58,15 @@ export default function RiderHome() {
 
         const { latitude, longitude } = location.coords;
 
-        const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+        const geocode = await Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
         if (geocode.length > 0) {
           const { street, city, region, country } = geocode[0];
-          const address = `${street || ""}, ${city || ""}, ${region || ""}, ${country || ""}`
+          const address = `${street || ""}, ${city || ""}, ${region || ""}, ${
+            country || ""
+          }`
             .replace(/, ,/g, ",")
             .replace(/,,/g, ",")
             .trim();
@@ -86,43 +108,65 @@ export default function RiderHome() {
 
     const fetchRideRequests = () => {
       const requestsRef = collection(db, "ride_requests");
-      const unsubscribe = onSnapshot(requestsRef, (querySnapshot) => {
-        const requestsData = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.user_id === userDetail.uid && (data.status === "pending" || data.status === "accepted" || data.status === "picked_up" || data.status === "dropped_off")) {
-            requestsData.push({
-              id: doc.id,
-              ...data,
-            });
+      const unsubscribe = onSnapshot(
+        requestsRef,
+        (querySnapshot) => {
+          const requestsData = [];
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (
+              data.user_id === userDetail.uid &&
+              (data.status === "pending" ||
+                data.status === "accepted" ||
+                data.status === "picked_up" ||
+                data.status === "dropped_off")
+            ) {
+              requestsData.push({
+                id: doc.id,
+                ...data,
+              });
+            }
+          });
+          console.log(
+            "Ride requests updated:",
+            JSON.stringify(requestsData, null, 2)
+          );
+          setRideRequests(requestsData);
+          if (
+            requestsData.length > 0 &&
+            requestsData[0].status === "pending" &&
+            requestsData[0].id !== modalRequestId
+          ) {
+            setSearchModalVisible(true);
+            setModalRequestId(requestsData[0].id);
+          } else if (
+            requestsData.length === 0 ||
+            requestsData[0].status !== "pending"
+          ) {
+            setSearchModalVisible(false);
+            setModalRequestId(null);
           }
-        });
-        console.log("Ride requests updated:", JSON.stringify(requestsData, null, 2));
-        setRideRequests(requestsData);
-        if (requestsData.length > 0 && requestsData[0].status === "pending" && requestsData[0].id !== modalRequestId) {
-          setSearchModalVisible(true);
-          setModalRequestId(requestsData[0].id);
-        } else if (requestsData.length === 0 || requestsData[0].status !== "pending") {
-          setSearchModalVisible(false);
-          setModalRequestId(null);
+          if (
+            requestsData.length > 0 &&
+            (requestsData[0].status === "accepted" ||
+              requestsData[0].status === "picked_up" ||
+              requestsData[0].status === "dropped_off") &&
+            requestsData[0].driver_email
+          ) {
+            setSearchModalVisible(false);
+            setModalRequestId(null);
+            router.push(`pages/RiderTracking?requestId=${requestsData[0].id}`);
+          }
+        },
+        (error) => {
+          console.error("Error fetching ride requests:", error);
+          Toast.show({
+            type: "error",
+            text1: "Error",
+            text2: "Failed to load ride requests.",
+          });
         }
-        if (
-          requestsData.length > 0 &&
-          (requestsData[0].status === "accepted" || requestsData[0].status === "picked_up" || requestsData[0].status === "dropped_off") &&
-          requestsData[0].driver_email
-        ) {
-          setSearchModalVisible(false);
-          setModalRequestId(null);
-          router.push(`pages/RiderTracking?requestId=${requestsData[0].id}`);
-        }
-      }, (error) => {
-        console.error("Error fetching ride requests:", error);
-        Toast.show({
-          type: "error",
-          text1: "Error",
-          text2: "Failed to load ride requests.",
-        });
-      });
+      );
 
       return unsubscribe;
     };
@@ -134,7 +178,10 @@ export default function RiderHome() {
 
   const submitRideRequest = async () => {
     if (!origin || !userDetail?.email || !userDetail?.uid) {
-      Alert.alert("Error", "Please select a location and ensure you are logged in.");
+      Alert.alert(
+        "Error",
+        "Please select a location and ensure you are logged in."
+      );
       return;
     }
 
@@ -147,7 +194,11 @@ export default function RiderHome() {
     setLoading(true);
     try {
       const hasActiveRequest = rideRequests.some(
-        (req) => req.status === "pending" || req.status === "accepted" || req.status === "picked_up" || req.status === "dropped_off"
+        (req) =>
+          req.status === "pending" ||
+          req.status === "accepted" ||
+          req.status === "picked_up" ||
+          req.status === "dropped_off"
       );
       if (hasActiveRequest) {
         Alert.alert(
@@ -238,13 +289,17 @@ export default function RiderHome() {
   );
 
   const hasActiveRequest = rideRequests.some(
-    (req) => req.status === "pending" || req.status === "accepted" || req.status === "picked_up" || req.status === "dropped_off"
+    (req) =>
+      req.status === "pending" ||
+      req.status === "accepted" ||
+      req.status === "picked_up" ||
+      req.status === "dropped_off"
   );
 
   return (
     <View style={styles.container}>
       <Image
-        source={require('../../assets/images/logo.png')}
+        source={require("../../assets/images/logo.png")}
         style={styles.logo}
       />
       <View style={styles.searchContainer}>
@@ -254,7 +309,11 @@ export default function RiderHome() {
           placeholder="Where are you headed?"
         />
         <TouchableOpacity
-          style={[styles.submitButton, (loading || hasActiveRequest || isSubmitting) && styles.disabledButton]}
+          style={[
+            styles.submitButton,
+            (loading || hasActiveRequest || isSubmitting) &&
+              styles.disabledButton,
+          ]}
           onPress={submitRideRequest}
           disabled={loading || hasActiveRequest || isSubmitting}
         >
@@ -289,14 +348,20 @@ export default function RiderHome() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Searching for Driver</Text>
-            <ActivityIndicator size="large" color="#f3400d" style={styles.loader} />
+            <ActivityIndicator
+              size="large"
+              color="#f3400d"
+              style={styles.loader}
+            />
             <Text style={styles.modalText}>
               Please wait while we find a driver for your ride.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => rideRequests[0] && cancelRideRequest(rideRequests[0].id)}
+                onPress={() =>
+                  rideRequests[0] && cancelRideRequest(rideRequests[0].id)
+                }
               >
                 <Text style={styles.modalButtonText}>Cancel Request</Text>
               </TouchableOpacity>
@@ -390,52 +455,52 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContainer: {
-    width: '80%',
-    backgroundColor: '#1a2a9b',
+    width: "80%",
+    backgroundColor: "#1a2a9b",
     borderRadius: 10,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   modalTitle: {
-    color: '#eb7f05',
-    fontFamily: 'oswald-bold',
+    color: "#eb7f05",
+    fontFamily: "oswald-bold",
     fontSize: 22,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 15,
   },
   modalText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
+    color: "#fff",
+    fontFamily: "oswald-bold",
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 20,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
   },
   modalButton: {
     flex: 1,
     padding: 10,
     borderRadius: 5,
-    alignItems: 'center',
+    alignItems: "center",
     marginHorizontal: 5,
   },
   cancelButton: {
-    backgroundColor: '#888',
+    backgroundColor: "#888",
   },
   modalButtonText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
+    color: "#fff",
+    fontFamily: "oswald-bold",
     fontSize: 16,
   },
   loader: {

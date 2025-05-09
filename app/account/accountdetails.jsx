@@ -1,4 +1,12 @@
-import { Text, View, StyleSheet, TouchableOpacity, Image, Platform, Modal } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Platform,
+  Modal,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { UserDetailContext } from "../../context/UserDetailContext";
 import { useState, useContext, useEffect } from "react";
@@ -32,7 +40,7 @@ export default function AccountDetails() {
       });
       return;
     }
-  
+
     if (!uri || typeof uri !== "string" || !uri.startsWith("file://")) {
       console.error("Invalid URI:", uri);
       Toast.show({
@@ -42,54 +50,61 @@ export default function AccountDetails() {
       });
       return;
     }
-  
+
     try {
       console.log("Processing URI:", uri);
-  
+
       // Check if storage is defined
       if (!storage) {
         throw new Error("Firebase Storage is not initialized");
       }
-  
+
       // Fetch the image file as a Blob
       const response = await fetch(uri);
       const blob = await response.blob();
       console.log("Blob created:", { type: blob.type, size: blob.size });
-  
+
       // Create a reference in Firebase Storage
       const fileExtension = uri.split(".").pop()?.toLowerCase() || "jpg";
-      const storageRef = ref(storage, `profile_pictures/${userDetail.uid}.${fileExtension}`);
+      const storageRef = ref(
+        storage,
+        `profile_pictures/${userDetail.uid}.${fileExtension}`
+      );
       console.log("Storage reference:", storageRef.fullPath);
-  
+
       // Upload to Firebase Storage
       await uploadBytes(storageRef, blob);
       console.log("Image uploaded to Storage");
-  
+
       // Get the download URL
       const downloadURL = await getDownloadURL(storageRef);
       console.log("Download URL:", downloadURL);
-  
+
       // Update Firestore with the download URL
       const userDocRef = doc(db, "users", userDetail.email);
       await updateDoc(userDocRef, {
         profile_picture: downloadURL,
       });
       console.log("Firestore updated with profile_picture");
-  
+
       // Update local state and context
       setProfileImage(downloadURL);
       setUserDetail((prev) => ({
         ...prev,
         profile_picture: downloadURL,
       }));
-  
+
       Toast.show({
         type: "success",
         text1: "Success",
         text2: "Profile picture uploaded successfully.",
       });
     } catch (error) {
-      console.error("Error uploading profile picture:", error, JSON.stringify(error, null, 2));
+      console.error(
+        "Error uploading profile picture:",
+        error,
+        JSON.stringify(error, null, 2)
+      );
       Toast.show({
         type: "error",
         text1: "Error",
@@ -146,7 +161,9 @@ export default function AccountDetails() {
 
         {showCarDetails && (
           <>
-            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Car Details</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
+              Car Details
+            </Text>
             <TouchableOpacity
               style={styles.viewImageButton}
               onPress={handleViewCarImage}
@@ -156,23 +173,29 @@ export default function AccountDetails() {
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Car:</Text>
               <Text style={styles.infoValue}>
-                {userDetail?.car_details?.year || "N/A"} {userDetail?.car_details?.make || "N/A"}{" "}
+                {userDetail?.car_details?.year || "N/A"}{" "}
+                {userDetail?.car_details?.make || "N/A"}{" "}
                 {userDetail?.car_details?.model || "N/A"}
               </Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Color:</Text>
-              <Text style={styles.infoValue}>{userDetail?.car_details?.color || "N/A"}</Text>
+              <Text style={styles.infoValue}>
+                {userDetail?.car_details?.color || "N/A"}
+              </Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>MPG/Gas Type:</Text>
               <Text style={styles.infoValue}>
-                {userDetail?.car_details?.mpg || "N/A"}/{userDetail?.car_details?.gas_type || "N/A"}
+                {userDetail?.car_details?.mpg || "N/A"}/
+                {userDetail?.car_details?.gas_type || "N/A"}
               </Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Capacity:</Text>
-              <Text style={styles.infoValue}>{userDetail?.car_details?.capacity || "N/A"}</Text>
+              <Text style={styles.infoValue}>
+                {userDetail?.car_details?.capacity || "N/A"}
+              </Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>License Plate:</Text>

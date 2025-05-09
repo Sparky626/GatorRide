@@ -1,4 +1,12 @@
-import { Text, View, StyleSheet, FlatList, Image, Modal, TouchableOpacity } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  FlatList,
+  Image,
+  Modal,
+  TouchableOpacity,
+} from "react-native";
 import React, { useState, useEffect, useContext } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
 import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
@@ -17,24 +25,31 @@ export default function DriverHome() {
 
   useEffect(() => {
     const requestsRef = collection(db, "ride_requests");
-    const unsubscribe = onSnapshot(requestsRef, (querySnapshot) => {
-      const requestsData = [];
-      querySnapshot.forEach((doc) => {
-        requestsData.push({
-          id: doc.id,
-          ...doc.data(),
+    const unsubscribe = onSnapshot(
+      requestsRef,
+      (querySnapshot) => {
+        const requestsData = [];
+        querySnapshot.forEach((doc) => {
+          requestsData.push({
+            id: doc.id,
+            ...doc.data(),
+          });
         });
-      });
-      console.log("DriverHome ride requests:", JSON.stringify(requestsData, null, 2));
-      setRideRequests(requestsData);
-    }, (error) => {
-      console.error("Error fetching ride requests:", error);
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Failed to load ride requests.",
-      });
-    });
+        console.log(
+          "DriverHome ride requests:",
+          JSON.stringify(requestsData, null, 2)
+        );
+        setRideRequests(requestsData);
+      },
+      (error) => {
+        console.error("Error fetching ride requests:", error);
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Failed to load ride requests.",
+        });
+      }
+    );
 
     return () => unsubscribe();
   }, []);
@@ -71,14 +86,20 @@ export default function DriverHome() {
         rating: userDetail.rating || "N/A",
       };
 
-      console.log("Accepting ride with driver data:", JSON.stringify(driver, null, 2));
+      console.log(
+        "Accepting ride with driver data:",
+        JSON.stringify(driver, null, 2)
+      );
       const updateData = {
         status: "accepted",
         driver_id: userDetail.uid,
         driver_email: userDetail.email,
         driver,
       };
-      console.log("Updating ride request:", JSON.stringify(updateData, null, 2));
+      console.log(
+        "Updating ride request:",
+        JSON.stringify(updateData, null, 2)
+      );
 
       await updateDoc(doc(db, "ride_requests", rideId), updateData);
 
@@ -115,7 +136,7 @@ export default function DriverHome() {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../../assets/images/logo.png')}
+        source={require("../../assets/images/logo.png")}
         style={styles.logo}
       />
       <View style={styles.requestsContainer}>
@@ -151,7 +172,8 @@ export default function DriverHome() {
                   To: {selectedRequest.destination}
                 </Text>
                 <Text style={styles.modalText}>
-                  Requested: {new Date(selectedRequest.createdAt).toLocaleString()}
+                  Requested:{" "}
+                  {new Date(selectedRequest.createdAt).toLocaleString()}
                 </Text>
               </View>
             )}
@@ -180,8 +202,8 @@ export default function DriverHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b1e7d',
-    alignItems: 'center',
+    backgroundColor: "#0b1e7d",
+    alignItems: "center",
   },
   logo: {
     width: 180,
@@ -190,84 +212,84 @@ const styles = StyleSheet.create({
   },
   requestsContainer: {
     flex: 1,
-    alignItems: 'center',
-    width: '90%',
-    backgroundColor: '#1a2a9b',
+    alignItems: "center",
+    width: "90%",
+    backgroundColor: "#1a2a9b",
     borderRadius: 15,
     padding: 12.5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   sectionTitle: {
-    color: 'white',
-    fontFamily: 'oswald-bold',
+    color: "white",
+    fontFamily: "oswald-bold",
     fontSize: 24,
     marginBottom: 15,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptyText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
+    color: "#fff",
+    fontFamily: "oswald-bold",
     fontSize: 18,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 20,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContainer: {
-    width: '80%',
-    backgroundColor: '#1a2a9b',
+    width: "80%",
+    backgroundColor: "#1a2a9b",
     borderRadius: 10,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   modalTitle: {
-    color: '#eb7f05',
-    fontFamily: 'oswald-bold',
+    color: "#eb7f05",
+    fontFamily: "oswald-bold",
     fontSize: 22,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 15,
   },
   modalContent: {
     marginBottom: 20,
   },
   modalText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
+    color: "#fff",
+    fontFamily: "oswald-bold",
     fontSize: 16,
     marginBottom: 8,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   modalButton: {
     flex: 1,
     padding: 10,
     borderRadius: 5,
-    alignItems: 'center',
+    alignItems: "center",
     marginHorizontal: 5,
   },
   acceptButton: {
-    backgroundColor: '#f3400d',
+    backgroundColor: "#f3400d",
   },
   cancelButton: {
-    backgroundColor: '#888',
+    backgroundColor: "#888",
   },
   modalButtonText: {
-    color: '#fff',
-    fontFamily: 'oswald-bold',
+    color: "#fff",
+    fontFamily: "oswald-bold",
     fontSize: 16,
   },
 });

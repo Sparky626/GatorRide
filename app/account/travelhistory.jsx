@@ -1,4 +1,11 @@
-import { Text, View, StyleSheet, FlatList, TouchableOpacity, Platform } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Platform,
+} from "react-native";
 import React, { useState, useEffect, useContext } from "react";
 import { UserDetailContext } from "@/context/UserDetailContext";
 import { collection, getDocs } from "firebase/firestore";
@@ -26,10 +33,9 @@ export default function TravelHistory() {
           });
           return;
         }
-        if (userDetail.driver){
+        if (userDetail.driver) {
           var ridesRef = collection(db, "users", user, "completed_rides");
-        }
-        else{
+        } else {
           var ridesRef = collection(db, "users", user, "rides");
         }
         const querySnapshot = await getDocs(ridesRef);
@@ -93,7 +99,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignSelf: "flex-start",
-    marginTop: (Platform.OS === 'ios') ? 40 : 0,
+    marginTop: Platform.OS === "ios" ? 40 : 0,
     marginBottom: 20,
   },
   backButtonText: {

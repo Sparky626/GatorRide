@@ -1,4 +1,13 @@
-import { Text, View, StyleSheet, TouchableOpacity, TextInput, TouchableWithoutFeedback, Keyboard, Platform } from "react-native";
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useContext } from "react";
 import { UserDetailContext } from "../../context/UserDetailContext";
@@ -43,7 +52,8 @@ export default function DriverSignUp() {
     { label: "4", value: "4" },
   ]);
 
-  const FALLBACK_IMAGE_URL = "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"; // Replace with Firebase Storage URL
+  const FALLBACK_IMAGE_URL =
+    "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"; // Replace with Firebase Storage URL
 
   const fetchCarImage = async (make, model, year, color, variant, bodySize) => {
     try {
@@ -71,7 +81,18 @@ export default function DriverSignUp() {
   };
 
   const handleSignUp = async () => {
-    if (!carModel || !carMake || !carYear || !mpg || !gasType || !licensePlate || !capacity || !color || !variant || !bodySize) {
+    if (
+      !carModel ||
+      !carMake ||
+      !carYear ||
+      !mpg ||
+      !gasType ||
+      !licensePlate ||
+      !capacity ||
+      !color ||
+      !variant ||
+      !bodySize
+    ) {
       Toast.show({
         type: "error",
         text1: "Error!",
@@ -80,7 +101,11 @@ export default function DriverSignUp() {
       return;
     }
 
-    if (isNaN(carYear) || carYear < 1900 || carYear > new Date().getFullYear() + 1) {
+    if (
+      isNaN(carYear) ||
+      carYear < 1900 ||
+      carYear > new Date().getFullYear() + 1
+    ) {
       Toast.show({
         type: "error",
         text1: "Error!",
@@ -136,7 +161,14 @@ export default function DriverSignUp() {
         user_id: uid,
       };
 
-      const carImageUrl = await fetchCarImage(carMake, carModel, carYear, color, variant, bodySize);
+      const carImageUrl = await fetchCarImage(
+        carMake,
+        carModel,
+        carYear,
+        color,
+        variant,
+        bodySize
+      );
       console.log("Car image URL:", carImageUrl);
 
       const response = await fetch(carImageUrl);
@@ -147,7 +179,10 @@ export default function DriverSignUp() {
       console.log("Car image Blob:", { type: blob.type, size: blob.size });
 
       const fileExtension = blob.type.split("/")[1] || "jpg";
-      const storageRef = ref(storage, `car_images/${vehicleId}.${fileExtension}`);
+      const storageRef = ref(
+        storage,
+        `car_images/${vehicleId}.${fileExtension}`
+      );
       await uploadBytes(storageRef, blob, { metadata: { user_id: uid } });
       console.log("Car image uploaded to Storage");
 
@@ -183,7 +218,11 @@ export default function DriverSignUp() {
 
       router.push("/(tabs)/profile");
     } catch (error) {
-      console.error("Error signing up as driver:", error, JSON.stringify(error, null, 2));
+      console.error(
+        "Error signing up as driver:",
+        error,
+        JSON.stringify(error, null, 2)
+      );
       Toast.show({
         type: "error",
         text1: "Error!",
@@ -221,23 +260,23 @@ export default function DriverSignUp() {
             onChangeText={setCarModel}
           />
           <View style={styles.inputRow}>
-          <View style={[styles.pickerContainer, styles.inputHalf]}>
-            <DropDownPicker
-              open={openVariant}
-              value={variant}
-              items={variantItems}
-              setOpen={setOpenVariant}
-              setValue={setVariant}
-              setItems={setVariantItems}
-              placeholder="Vehicle Type"
-              style={styles.picker}
-              textStyle={styles.pickerText}
-              dropDownContainerStyle={styles.dropDown}
-              zIndex={3000}
-              placeholderStyle={styles.pickerPlaceholder}
-              arrowIconStyle={styles.arrowIcon}
-            />
-          </View>
+            <View style={[styles.pickerContainer, styles.inputHalf]}>
+              <DropDownPicker
+                open={openVariant}
+                value={variant}
+                items={variantItems}
+                setOpen={setOpenVariant}
+                setValue={setVariant}
+                setItems={setVariantItems}
+                placeholder="Vehicle Type"
+                style={styles.picker}
+                textStyle={styles.pickerText}
+                dropDownContainerStyle={styles.dropDown}
+                zIndex={3000}
+                placeholderStyle={styles.pickerPlaceholder}
+                arrowIconStyle={styles.arrowIcon}
+              />
+            </View>
             <View style={[styles.pickerContainer, styles.inputHalf]}>
               <DropDownPicker
                 open={openBodySize}
@@ -264,13 +303,13 @@ export default function DriverSignUp() {
             onChangeText={setColor}
           />
           <TextInput
-              style={[styles.input]}
-              placeholder="Year (e.g., 2018)"
-              placeholderTextColor="#888"
-              value={carYear}
-              onChangeText={setCarYear}
-              keyboardType="numeric"
-            />
+            style={[styles.input]}
+            placeholder="Year (e.g., 2018)"
+            placeholderTextColor="#888"
+            value={carYear}
+            onChangeText={setCarYear}
+            keyboardType="numeric"
+          />
           <View style={styles.inputRow}>
             <TextInput
               style={[styles.input, styles.inputHalf]}
@@ -388,7 +427,7 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     flexDirection: "row",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
   },
   inputHalf: {
     height: 49.5,

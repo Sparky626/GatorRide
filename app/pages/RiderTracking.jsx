@@ -1,16 +1,36 @@
 import React, { useState, useEffect, useContext, useMemo, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, Modal } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Image,
+  Modal,
+} from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { Rating } from "react-native-elements";
 import { UserDetailContext } from "@/context/UserDetailContext";
-import { doc, onSnapshot, deleteDoc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  onSnapshot,
+  deleteDoc,
+  setDoc,
+  getDoc,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import * as Location from "expo-location";
 import Toast from "react-native-toast-message";
 import toastConfig from "../../config/toastConfig";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { updateFirestoreLocation, geocodeAddress, fetchDirections } from "../../utils/mapUtils";
+import {
+  updateFirestoreLocation,
+  geocodeAddress,
+  fetchDirections,
+} from "../../utils/mapUtils";
 
 export default function RiderTracking() {
   const { userDetail } = useContext(UserDetailContext);
@@ -40,7 +60,10 @@ export default function RiderTracking() {
           const data = { id: doc.id, ...doc.data() };
           setRideRequest(data);
           console.log("Ride request data:", JSON.stringify(data, null, 2));
-          console.log("Driver car image URL:", data?.driver?.car_details?.image_url);
+          console.log(
+            "Driver car image URL:",
+            data?.driver?.car_details?.image_url
+          );
         } else {
           Toast.show({
             type: "error",
@@ -70,11 +93,19 @@ export default function RiderTracking() {
         }
 
         locationSubscription = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 5000,
+            distanceInterval: 10,
+          },
           (location) => {
             const { latitude, longitude } = location.coords;
             setUserLocation({ latitude, longitude });
-            updateFirestoreLocation({ latitude, longitude }, "rider_location", requestId);
+            updateFirestoreLocation(
+              { latitude, longitude },
+              "rider_location",
+              requestId
+            );
           }
         );
       } catch (error) {
@@ -152,18 +183,29 @@ export default function RiderTracking() {
       const dLon = toRad(lon2 - lon1);
       const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        Math.cos(toRad(lat1)) *
+          Math.cos(toRad(lat2)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
 
-    const distance = calculateDistance(rideRequest.driver_location, riderLocation);
+    const distance = calculateDistance(
+      rideRequest.driver_location,
+      riderLocation
+    );
     if (distance <= 50) {
       setArrivalModalVisible(true);
       setHasShownArrivalModal(true);
       setTimer(5);
     }
-  }, [rideRequest?.driver_location, riderLocation, hasShownArrivalModal, rideRequest?.status]);
+  }, [
+    rideRequest?.driver_location,
+    riderLocation,
+    hasShownArrivalModal,
+    rideRequest?.status,
+  ]);
 
   useEffect(() => {
     if (rideRequest?.status !== "drop_off_confirmed" || hasShownRatingModal) {
@@ -176,7 +218,7 @@ export default function RiderTracking() {
   }, [rideRequest?.status, hasShownRatingModal]);
 
   useEffect(() => {
-    if (!arrivalModalVisible && !ratingModalVisible || timer <= 0) return;
+    if ((!arrivalModalVisible && !ratingModalVisible) || timer <= 0) return;
 
     const interval = setInterval(() => {
       setTimer((prev) => prev - 1);
@@ -217,7 +259,11 @@ export default function RiderTracking() {
     }
 
     const loadRoute = async () => {
-      const points = await fetchDirections(riderLocation, destinationCoords, "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo");
+      const points = await fetchDirections(
+        riderLocation,
+        destinationCoords,
+        "AIzaSyDbqqlJ2OHE5XkfZtDr5-rGVsZPO0Jwqeo"
+      );
       setRouteCoordinates(points);
     };
 
@@ -306,7 +352,10 @@ export default function RiderTracking() {
     }
 
     if (!rideRequest.driver_email) {
-      console.error("Missing driver_email in rideRequest:", JSON.stringify(rideRequest, null, 2));
+      console.error(
+        "Missing driver_email in rideRequest:",
+        JSON.stringify(rideRequest, null, 2)
+      );
       Toast.show({
         type: "error",
         text1: "Error",
@@ -317,7 +366,9 @@ export default function RiderTracking() {
 
     try {
       // Calculate ride_time in minutes
-      const createdAt = rideRequest.createdAt ? new Date(rideRequest.createdAt) : new Date();
+      const createdAt = rideRequest.createdAt
+        ? new Date(rideRequest.createdAt)
+        : new Date();
       const now = new Date();
       const ride_time = Math.round((now - createdAt) / (1000 * 60));
 
@@ -330,7 +381,10 @@ export default function RiderTracking() {
         const currentRating = parseFloat(driverDoc.data().rating || "0");
         const currentCount = driverDoc.data().ratingCount || 0;
         ratingCount = currentCount + 1;
-        newRating = ((currentRating * currentCount + rating) / ratingCount).toFixed(2);
+        newRating = (
+          (currentRating * currentCount + rating) /
+          ratingCount
+        ).toFixed(2);
         await updateDoc(driverDocRef, {
           rating: newRating,
           ratingCount,
@@ -367,10 +421,22 @@ export default function RiderTracking() {
       };
 
       // Save ride to rider's rides
-      await setDoc(doc(db, "users", userDetail.email, "rides", rideRequest.id), rideData);
+      await setDoc(
+        doc(db, "users", userDetail.email, "rides", rideRequest.id),
+        rideData
+      );
 
       // Save ride to driver's completed_rides
-      await setDoc(doc(db, "users", rideRequest.driver_email, "completed_rides", rideRequest.id), rideData);
+      await setDoc(
+        doc(
+          db,
+          "users",
+          rideRequest.driver_email,
+          "completed_rides",
+          rideRequest.id
+        ),
+        rideData
+      );
 
       // Delete ride request
       await deleteDoc(doc(db, "ride_requests", rideRequest.id));
@@ -436,10 +502,16 @@ export default function RiderTracking() {
             region="US"
             precision="high"
             onReady={(result) => {
-              console.log("Directions result:", JSON.stringify(result, null, 2));
+              console.log(
+                "Directions result:",
+                JSON.stringify(result, null, 2)
+              );
             }}
             onError={(error) => {
-              console.error("MapViewDirections error:", JSON.stringify(error, null, 2));
+              console.error(
+                "MapViewDirections error:",
+                JSON.stringify(error, null, 2)
+              );
               Toast.show({
                 type: "error",
                 text1: "Route Error",
@@ -458,7 +530,8 @@ export default function RiderTracking() {
       </MapView>
       <View style={styles.infoContainer}>
         <Text style={styles.infoText}>
-          Driver: {rideRequest.driver?.first_name || "N/A"} {rideRequest.driver?.last_name || ""}
+          Driver: {rideRequest.driver?.first_name || "N/A"}{" "}
+          {rideRequest.driver?.last_name || ""}
         </Text>
         <Text style={styles.infoText}>From: {rideRequest.origin}</Text>
         <Text style={styles.infoText}>To: {rideRequest.destination}</Text>
@@ -475,7 +548,10 @@ export default function RiderTracking() {
           </View>
         )}
       </View>
-      <TouchableOpacity style={[styles.cancelButton, styles.riderCancel]} onPress={cancelRide}>
+      <TouchableOpacity
+        style={[styles.cancelButton, styles.riderCancel]}
+        onPress={cancelRide}
+      >
         <Text style={styles.cancelButtonText}>Cancel Request</Text>
       </TouchableOpacity>
       <Modal
@@ -488,7 +564,8 @@ export default function RiderTracking() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Driver Has Arrived!</Text>
             <Text style={styles.modalText}>
-              License Plate: {rideRequest?.driver?.car_details?.license_plate || "N/A"}
+              License Plate:{" "}
+              {rideRequest?.driver?.car_details?.license_plate || "N/A"}
             </Text>
             <TouchableOpacity
               style={[styles.closeButton, timer > 0 && styles.disabledButton]}
@@ -519,7 +596,7 @@ export default function RiderTracking() {
               type="star"
               fractions={0}
               startingValue={0}
-              ratingBackgroundColor='transparent'
+              ratingBackgroundColor="transparent"
               imageSize={30}
               onFinishRating={(value) => setRating(value)}
               style={styles.rating}
